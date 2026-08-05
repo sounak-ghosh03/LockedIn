@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,22 +6,25 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { useWorkoutPlans, useDeleteWorkoutPlan } from '../../api/queries/useWorkoutPlans';
-import { useWorkoutStore } from '../../store/workoutStore';
-import { colors, fontSize, spacing, radius } from '../../constants/theme';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import {
+  useWorkoutPlans,
+  useDeleteWorkoutPlan,
+} from "../../api/queries/useWorkoutPlans";
+import { useWorkoutStore } from "../../store/workoutStore";
+import { colors, fontSize, spacing, radius } from "../../constants/theme";
 
 const PLAN_TYPE_ICONS: Record<string, string> = {
-  'PPL':          '🔄',
-  'Upper/Lower':  '⬆️',
-  'Full Body':    '🔥',
-  'Custom':       '✏️',
+  PPL: "🔄",
+  "Upper/Lower": "⬆️",
+  "Full Body": "🔥",
+  Custom: "✏️",
 };
 
 export default function WorkoutScreen() {
@@ -31,29 +34,43 @@ export default function WorkoutScreen() {
   const activeSession = useWorkoutStore((s) => s.activeSession);
 
   const handleDeletePlan = (id: string, name: string) => {
-    Alert.alert(`Delete "${name}"?`, 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(`Delete "${name}"?`, "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: () => deletePlan.mutate(id),
       },
     ]);
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* ─── Header ─────────────────────────────────────────── */}
         <View style={styles.header}>
           <Text style={styles.title}>Workout</Text>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => router.push('/workout/new')}
-          >
-            <Ionicons name="add" size={24} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.historyBtn}
+              onPress={() => router.push("/workout-history")}
+            >
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => router.push("/workout/new")}
+            >
+              <Ionicons name="add" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ─── Active session resume banner ────────────────────── */}
@@ -68,7 +85,7 @@ export default function WorkoutScreen() {
                 label="Resume"
                 size="sm"
                 onPress={() =>
-                  router.push(`/workout/${activeSession.planId ?? 'active'}`)
+                  router.push(`/workout/${activeSession.planId ?? "active"}`)
                 }
               />
             </View>
@@ -79,9 +96,7 @@ export default function WorkoutScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Plans</Text>
 
-          {isLoading && (
-            <Text style={styles.muted}>Loading plans…</Text>
-          )}
+          {isLoading && <Text style={styles.muted}>Loading plans…</Text>}
 
           {!isLoading && plans.length === 0 && (
             <Card>
@@ -93,7 +108,7 @@ export default function WorkoutScreen() {
                 </Text>
                 <Button
                   label="Create Plan"
-                  onPress={() => router.push('/workout/new')}
+                  onPress={() => router.push("/workout/new")}
                   style={{ marginTop: spacing.md }}
                 />
               </View>
@@ -106,7 +121,7 @@ export default function WorkoutScreen() {
                 {/* Icon */}
                 <View style={styles.planIconWrap}>
                   <Text style={styles.planIcon}>
-                    {PLAN_TYPE_ICONS[plan.type] ?? '🏋️'}
+                    {PLAN_TYPE_ICONS[plan.type] ?? "🏋️"}
                   </Text>
                 </View>
 
@@ -116,7 +131,8 @@ export default function WorkoutScreen() {
                   <View style={styles.planMeta}>
                     <Badge label={plan.type} variant="muted" />
                     <Text style={styles.planExCount}>
-                      {plan.exercises.length} exercise{plan.exercises.length !== 1 ? 's' : ''}
+                      {plan.exercises.length} exercise
+                      {plan.exercises.length !== 1 ? "s" : ""}
                     </Text>
                   </View>
                 </View>
@@ -132,7 +148,11 @@ export default function WorkoutScreen() {
                     style={styles.deleteBtn}
                     onPress={() => handleDeletePlan(plan._id, plan.name)}
                   >
-                    <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color={colors.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -146,7 +166,9 @@ export default function WorkoutScreen() {
                 ))}
                 {plan.exercises.length > 4 && (
                   <View style={styles.exPreviewChip}>
-                    <Text style={styles.exPreviewText}>+{plan.exercises.length - 4} more</Text>
+                    <Text style={styles.exPreviewText}>
+                      +{plan.exercises.length - 4} more
+                    </Text>
                   </View>
                 )}
               </View>
@@ -162,7 +184,7 @@ export default function WorkoutScreen() {
               <TouchableOpacity
                 key={t.name}
                 style={styles.templateCard}
-                onPress={() => router.push('/workout/new')}
+                onPress={() => router.push("/workout/new")}
               >
                 <Text style={styles.templateIcon}>{t.icon}</Text>
                 <Text style={styles.templateName}>{t.name}</Text>
@@ -171,79 +193,147 @@ export default function WorkoutScreen() {
             ))}
           </View>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const TEMPLATES = [
-  { icon: '💪', name: 'Push / Pull / Legs', tag: '6-day' },
-  { icon: '⬆️', name: 'Upper / Lower', tag: '4-day' },
-  { icon: '🔥', name: 'Full Body', tag: '3-day' },
-  { icon: '✏️', name: 'Custom', tag: 'flexible' },
+  { icon: "💪", name: "Push / Pull / Legs", tag: "6-day" },
+  { icon: "⬆️", name: "Upper / Lower", tag: "4-day" },
+  { icon: "🔥", name: "Full Body", tag: "3-day" },
+  { icon: "✏️", name: "Custom", tag: "flexible" },
 ];
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing['2xl'], gap: spacing.xl, paddingBottom: spacing['5xl'] },
+  content: {
+    padding: spacing["2xl"],
+    gap: spacing.xl,
+    paddingBottom: spacing["5xl"],
+  },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontFamily: 'Outfit_700Bold', fontSize: fontSize['2xl'], color: colors.text },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  title: {
+    fontFamily: "Outfit_700Bold",
+    fontSize: fontSize["2xl"],
+    color: colors.text,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  historyBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   addBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
     backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // Active session
-  resumeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  resumeTitle: { fontFamily: 'Outfit_700Bold', fontSize: fontSize.base, color: colors.text },
-  resumeSub: { fontFamily: 'Inter_400Regular', fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2 },
+  resumeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  resumeTitle: {
+    fontFamily: "Outfit_700Bold",
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
+  resumeSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
 
   // Plans
   section: { gap: spacing.md },
-  sectionTitle: { fontFamily: 'Outfit_700Bold', fontSize: fontSize.lg, color: colors.text },
-  muted: { fontFamily: 'Inter_400Regular', fontSize: fontSize.sm, color: colors.textMuted },
+  sectionTitle: {
+    fontFamily: "Outfit_700Bold",
+    fontSize: fontSize.lg,
+    color: colors.text,
+  },
+  muted: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+  },
 
-  emptyPlan: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
+  emptyPlan: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
   emptyIcon: { fontSize: 36 },
-  emptyTitle: { fontFamily: 'Outfit_700Bold', fontSize: fontSize.lg, color: colors.text },
-  emptyText: { fontFamily: 'Inter_400Regular', fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center' },
+  emptyTitle: {
+    fontFamily: "Outfit_700Bold",
+    fontSize: fontSize.lg,
+    color: colors.text,
+  },
+  emptyText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
 
   planCard: { gap: spacing.md },
-  planRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  planRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   planIconWrap: {
     width: 42,
     height: 42,
     borderRadius: radius.md,
     backgroundColor: colors.accentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.borderAccent,
   },
   planIcon: { fontSize: 20 },
   planInfo: { flex: 1, gap: 4 },
-  planName: { fontFamily: 'Outfit_600SemiBold', fontSize: fontSize.base, color: colors.text },
-  planMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  planExCount: { fontFamily: 'Inter_400Regular', fontSize: fontSize.xs, color: colors.textMuted },
-  planActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  planName: {
+    fontFamily: "Outfit_600SemiBold",
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
+  planMeta: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  planExCount: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  planActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   deleteBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
   },
 
-  exercisePreview: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  exercisePreview: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   exPreviewChip: {
     backgroundColor: colors.surfaceAlt,
     paddingHorizontal: spacing.sm,
@@ -252,12 +342,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  exPreviewText: { fontFamily: 'Inter_400Regular', fontSize: fontSize.xs, color: colors.textMuted },
+  exPreviewText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
 
   // Templates
-  templatesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  templatesGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   templateCard: {
-    width: '47%',
+    width: "47%",
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -266,5 +360,9 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   templateIcon: { fontSize: 28 },
-  templateName: { fontFamily: 'Inter_600SemiBold', fontSize: fontSize.sm, color: colors.text },
+  templateName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: fontSize.sm,
+    color: colors.text,
+  },
 });

@@ -137,6 +137,20 @@ export default function RootLayout() {
                   }}
                 />
                 <Stack.Screen
+                  name="workout-history"
+                  options={{
+                    presentation: "card",
+                    animation: "slide_from_right",
+                  }}
+                />
+                <Stack.Screen
+                  name="workout-session/[id]"
+                  options={{
+                    presentation: "card",
+                    animation: "slide_from_right",
+                  }}
+                />
+                <Stack.Screen
                   name="timer"
                   options={{
                     presentation: "modal",

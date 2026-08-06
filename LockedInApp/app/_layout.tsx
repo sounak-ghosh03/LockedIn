@@ -171,6 +171,13 @@ export default function RootLayout() {
                     animation: "slide_from_right",
                   }}
                 />
+                <Stack.Screen
+                  name="calendar"
+                  options={{
+                    presentation: "card",
+                    animation: "slide_from_right",
+                  }}
+                />
               </Stack>
             </AuthGate>
           </AuthProvider>

@@ -356,6 +356,38 @@ export default function HomeScreen() {
           </Card>
         </View>
 
+        {/* ─── Quick shortcuts ──────────────────────────── */}
+        <View style={styles.shortcutsRow}>
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => router.push("/calendar")}
+          >
+            <Text style={styles.shortcutIcon}>📅</Text>
+            <Text style={styles.shortcutLabel}>Calendar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => router.push("/timer")}
+          >
+            <Text style={styles.shortcutIcon}>⏱</Text>
+            <Text style={styles.shortcutLabel}>Timer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => router.push("/workout-history")}
+          >
+            <Text style={styles.shortcutIcon}>📋</Text>
+            <Text style={styles.shortcutLabel}>History</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            onPress={() => router.push("/ai")}
+          >
+            <Text style={styles.shortcutIcon}>🤖</Text>
+            <Text style={styles.shortcutLabel}>AI Coach</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* ─── AI Tip ───────────────────────────────────── */}
         <TouchableOpacity
           onPress={() => router.push("/ai")}
@@ -545,5 +577,26 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  shortcutsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  shortcutCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  shortcutIcon: { fontSize: 22 },
+  shortcutLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: "center",
   },
 });

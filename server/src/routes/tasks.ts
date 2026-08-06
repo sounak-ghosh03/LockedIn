@@ -9,30 +9,54 @@ import { Task } from "../models/Task";
 const router = Router();
 router.use(verifyToken);
 
+const CATEGORIES = [
+  "study",
+  "coding",
+  "fitness",
+  "work",
+  "personal",
+  "custom",
+] as const;
+
+const subtaskSchema = z.object({
+  title: z.string().min(1),
+  completed: z.boolean().default(false),
+});
+
 const createTaskSchema = z.object({
   title: z.string().min(1).max(200),
-  category: z.enum(["study", "coding", "custom"]).default("custom"),
+  category: z.enum(CATEGORIES).default("custom"),
   customCategoryLabel: z.string().default(""),
+  priority: z.enum(["high", "medium", "low"]).default("medium"),
   dueDate: z.string().datetime().optional(),
+  notes: z.string().optional(),
+  subtasks: z.array(subtaskSchema).default([]),
 });
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(200).optional(),
-  category: z.enum(["study", "coding", "custom"]).optional(),
+  category: z.enum(CATEGORIES).optional(),
   customCategoryLabel: z.string().optional(),
+  priority: z.enum(["high", "medium", "low"]).optional(),
   dueDate: z.string().datetime().optional().nullable(),
   completed: z.boolean().optional(),
+  notes: z.string().optional(),
+  subtasks: z.array(subtaskSchema).optional(),
 });
 
-/** GET /tasks — filter by completed, category, date range */
+/** GET /tasks — filter by completed, category, priority */
 router.get(
   "/",
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const { completed, category } = req.query as Record<string, string>;
+      const { completed, category, priority } = req.query as Record<
+        string,
+        string
+      >;
       const filter: Record<string, unknown> = { userId: req.userId };
       if (completed !== undefined) filter.completed = completed === "true";
       if (category) filter.category = category;
+      if (priority) filter.priority = priority;
       const tasks = await Task.find(filter).sort({ dueDate: 1, createdAt: -1 });
       res.json(tasks);
     } catch (err) {

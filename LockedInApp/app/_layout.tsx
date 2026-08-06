@@ -97,6 +97,11 @@ export default function RootLayout() {
     Inter_600SemiBold,
   });
 
+  // Request notification permissions on first launch (non-blocking)
+  useEffect(() => {
+    Notifications.requestPermissionsAsync().catch(() => {});
+  }, []);
+
   if (!fontsLoaded) {
     return (
       <View

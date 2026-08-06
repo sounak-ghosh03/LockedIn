@@ -11,7 +11,14 @@ router.use(verifyToken);
 
 const createTaskSessionSchema = z.object({
   taskId: z.string().optional(),
-  category: z.enum(["study", "coding", "custom"]),
+  category: z.enum([
+    "study",
+    "coding",
+    "fitness",
+    "work",
+    "personal",
+    "custom",
+  ]),
   customCategoryLabel: z.string().default(""),
   date: z.string().datetime().optional(),
   durationMinutes: z.number().min(0),

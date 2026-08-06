@@ -17,7 +17,7 @@ const taskSessionSchema = new Schema<ITaskSession>(
     taskId: { type: Schema.Types.ObjectId, ref: "Task" },
     category: {
       type: String,
-      enum: ["study", "coding", "custom"],
+      enum: ["study", "coding", "fitness", "work", "personal", "custom"],
       required: true,
     },
     customCategoryLabel: { type: String, default: "" },

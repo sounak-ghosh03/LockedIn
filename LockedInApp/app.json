@@ -26,7 +26,6 @@
     },
     "android": {
       "adaptiveIcon": {
-        
         "backgroundColor": "#0D0D0D"
       },
       "package": "com.lockedin.app",
@@ -70,15 +69,17 @@
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
-      }
-    },
     "updates": {
-      "url": "https://u.expo.dev/YOUR_EAS_PROJECT_ID",
+      "url": "https://u.expo.dev/7371dcca-e467-4586-8d74-129e647d5ecd",
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7371dcca-e467-4586-8d74-129e647d5ecd"
+      }
+    },
+    "owner": "sounakg.dev"
   }
 }

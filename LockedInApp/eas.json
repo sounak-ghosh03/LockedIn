@@ -25,7 +25,7 @@
       },
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-api-server.com/api"
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000/"
       }
     },
     "production": {
@@ -35,7 +35,7 @@
       },
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-api-server.com/api"
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000/"
       }
     }
   },

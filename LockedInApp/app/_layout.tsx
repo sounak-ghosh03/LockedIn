@@ -130,7 +130,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <AuthGate>
-              <StatusBar style="light" backgroundColor={colors.background} />
+              <StatusBar style="light" />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(tabs)" />

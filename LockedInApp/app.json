@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        
         "backgroundColor": "#0D0D0D"
       },
       "package": "com.lockedin.app",
@@ -37,8 +37,7 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE"
-      ],
-      "googleServicesFile": "./google-services.json"
+      ]
     },
     "web": {
       "bundler": "metro",

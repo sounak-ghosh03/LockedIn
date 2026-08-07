@@ -31,7 +31,9 @@ export interface AppUser {
   units: "metric" | "imperial";
   aiProvider: "gemini" | "openai" | "both";
   restTimerDefaultSeconds: number;
-  goals: { weightKg: number; bodyFat: number };
+  goals: { weightKg: number; bodyFat: number; dailyCalories: number };
+  geminiApiKey?: string; // "••••••••" if set, "" if not
+  openaiApiKey?: string; // "••••••••" if set, "" if not
 }
 
 interface AuthContextValue {

@@ -3,6 +3,9 @@
     "name": "LockedIn",
     "slug": "lockedin",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +18,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lockedin.app"
+      "bundleIdentifier": "com.lockedin.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used for scanning food barcodes and profile photos.",
+        "NSPhotoLibraryUsageDescription": "Used to set your profile photo."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +30,15 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "com.lockedin.app",
-      "permissions": ["NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED", "VIBRATE"]
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +51,8 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#FF4D00",
-          "sounds": []
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": false
         }
       ],
       [
@@ -44,10 +60,26 @@
         {
           "fonts": []
         }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": false
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/YOUR_EAS_PROJECT_ID",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     }
   }
 }

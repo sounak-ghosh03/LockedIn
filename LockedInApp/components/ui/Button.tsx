@@ -16,7 +16,7 @@ import {
   shadows,
 } from "../../constants/theme";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
 
 interface ButtonProps {
@@ -118,6 +118,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.error,
   },
+  variant_outline: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 
   // Sizes
   size_sm: {
@@ -147,6 +152,7 @@ const styles = StyleSheet.create({
   text_secondary: { color: colors.text },
   text_ghost: { color: colors.accent },
   text_danger: { color: colors.error },
+  text_outline: { color: colors.textMuted },
 
   // Text sizes
   textSize_sm: { fontSize: fontSize.xs },

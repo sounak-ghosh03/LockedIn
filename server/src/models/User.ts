@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   name: string;
   picture: string;
-  goals: { weightKg: number; bodyFat: number };
+  goals: { weightKg: number; bodyFat: number; dailyCalories: number };
   units: "metric" | "imperial";
   aiProvider: "gemini" | "openai" | "both";
   geminiApiKey: string;
@@ -21,8 +21,9 @@ const userSchema = new Schema<IUser>(
     name: { type: String, default: "" },
     picture: { type: String, default: "" },
     goals: {
-      weightKg: { type: Number, default: 0 },
-      bodyFat: { type: Number, default: 0 },
+      weightKg: { type: Number, default: 75 },
+      bodyFat: { type: Number, default: 15 },
+      dailyCalories: { type: Number, default: 2500 },
     },
     units: { type: String, enum: ["metric", "imperial"], default: "metric" },
     aiProvider: {

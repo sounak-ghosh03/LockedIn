@@ -49,6 +49,9 @@ function buildUserPayload(user: InstanceType<typeof User>) {
     aiProvider: user.aiProvider,
     restTimerDefaultSeconds: user.restTimerDefaultSeconds,
     goals: user.goals,
+    // Signal (not value) whether keys are configured — matches GET /me shape
+    geminiApiKey: user.geminiApiKey ? "••••••••" : "",
+    openaiApiKey: user.openaiApiKey ? "••••••••" : "",
   };
 }
 

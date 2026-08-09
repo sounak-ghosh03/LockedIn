@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuthContext } from "../../auth/AuthProvider";
 import { ApiError } from "../../api/client";
@@ -30,6 +31,8 @@ export default function SignupScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
 
@@ -126,87 +129,119 @@ export default function SignupScreen() {
             {/* Name input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={(t) => {
-                  setName(t);
-                  clearError();
-                }}
-                placeholder="Your name"
-                placeholderTextColor={colors.textFaint}
-                autoCapitalize="words"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                editable={!busy}
-                testID="signup-name-input"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={name}
+                  onChangeText={(t) => {
+                    setName(t);
+                    clearError();
+                  }}
+                  placeholder="Your name"
+                  placeholderTextColor={colors.textFaint}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  onSubmitEditing={() => emailRef.current?.focus()}
+                  editable={!busy}
+                  testID="signup-name-input"
+                />
+              </View>
             </View>
 
             {/* Email input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                ref={emailRef}
-                style={styles.input}
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  clearError();
-                }}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.textFaint}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                editable={!busy}
-                testID="signup-email-input"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  ref={emailRef}
+                  style={[styles.input, { flex: 1 }]}
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    clearError();
+                  }}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  editable={!busy}
+                  testID="signup-email-input"
+                />
+              </View>
             </View>
 
             {/* Password input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password</Text>
-              <TextInput
-                ref={passwordRef}
-                style={styles.input}
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  clearError();
-                }}
-                placeholder="Min. 8 characters"
-                placeholderTextColor={colors.textFaint}
-                secureTextEntry
-                returnKeyType="next"
-                onSubmitEditing={() => confirmRef.current?.focus()}
-                editable={!busy}
-                testID="signup-password-input"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  ref={passwordRef}
+                  style={[styles.input, { flex: 1 }]}
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    clearError();
+                  }}
+                  placeholder="Min. 8 characters"
+                  placeholderTextColor={colors.textFaint}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmRef.current?.focus()}
+                  editable={!busy}
+                  testID="signup-password-input"
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword((v) => !v)}
+                  testID="signup-password-eye"
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Confirm password input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Confirm Password</Text>
-              <TextInput
-                ref={confirmRef}
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={(t) => {
-                  setConfirmPassword(t);
-                  clearError();
-                }}
-                placeholder="Repeat your password"
-                placeholderTextColor={colors.textFaint}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleSignup}
-                editable={!busy}
-                testID="signup-confirm-input"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  ref={confirmRef}
+                  style={[styles.input, { flex: 1 }]}
+                  value={confirmPassword}
+                  onChangeText={(t) => {
+                    setConfirmPassword(t);
+                    clearError();
+                  }}
+                  placeholder="Repeat your password"
+                  placeholderTextColor={colors.textFaint}
+                  secureTextEntry={!showConfirmPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSignup}
+                  editable={!busy}
+                  testID="signup-confirm-input"
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  testID="signup-confirm-eye"
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                    }
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Primary — Create Account button */}
@@ -349,17 +384,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.3,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
+    height: 52,
+  },
+  input: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
     fontFamily: "Inter_400Regular",
     fontSize: fontSize.base,
     color: colors.text,
     height: 52,
+  },
+  eyeBtn: {
+    width: 44,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingRight: spacing.sm,
   },
 
   // ── Primary button ────────────────────────────────────────────────────────

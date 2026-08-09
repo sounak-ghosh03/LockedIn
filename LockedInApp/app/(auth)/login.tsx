@@ -10,9 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuthContext } from "../../auth/AuthProvider";
 import { ApiError } from "../../api/client";
@@ -30,6 +30,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
 
@@ -176,43 +177,57 @@ export default function LoginScreen() {
             {/* Email input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  if (error) setError("");
-                }}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.textFaint}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                editable={!busy}
-                testID="login-email-input"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    if (error) setError("");
+                  }}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  editable={!busy}
+                  testID="login-email-input"
+                />
+              </View>
             </View>
 
             {/* Password input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  if (error) setError("");
-                }}
-                placeholder="••••••••"
-                placeholderTextColor={colors.textFaint}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-                editable={!busy}
-                testID="login-password-input"
-                
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    if (error) setError("");
+                  }}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textFaint}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  editable={!busy}
+                  testID="login-password-input"
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword((v) => !v)}
+                  testID="login-password-eye"
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Primary — Login button */}
@@ -371,17 +386,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.3,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
+    height: 52,
+  },
+  input: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
     fontFamily: "Inter_400Regular",
     fontSize: fontSize.base,
     color: colors.text,
     height: 52,
+  },
+  eyeBtn: {
+    width: 44,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingRight: spacing.sm,
   },
 
   // ── Primary button ────────────────────────────────────────────────────────

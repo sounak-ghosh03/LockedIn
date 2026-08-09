@@ -39,7 +39,7 @@ router.post(
     try {
       const { message, provider: reqProvider } = chatSchema.parse(req.body);
 
-      const user = await User.findOne({ googleId: req.userId });
+      const user = await User.findOne({ _id: req.userId });
       if (!user) {
         res.status(404).json({ error: "User not found" });
         return;
@@ -88,11 +88,9 @@ Answer the user's question based on this data. Be concise, motivating, and pract
 
       if (activeProvider === "gemini") {
         if (!user.geminiApiKey) {
-          res
-            .status(400)
-            .json({
-              error: "Gemini API key not configured. Go to Settings to add it.",
-            });
+          res.status(400).json({
+            error: "Gemini API key not configured. Go to Settings to add it.",
+          });
           return;
         }
         const response = await fetch(
@@ -124,11 +122,9 @@ Answer the user's question based on this data. Be concise, motivating, and pract
       } else {
         // OpenAI
         if (!user.openaiApiKey) {
-          res
-            .status(400)
-            .json({
-              error: "OpenAI API key not configured. Go to Settings to add it.",
-            });
+          res.status(400).json({
+            error: "OpenAI API key not configured. Go to Settings to add it.",
+          });
           return;
         }
         const response = await fetch(

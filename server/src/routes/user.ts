@@ -21,7 +21,7 @@ router.get(
   "/",
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const user = await User.findOne({ googleId: req.userId });
+      const user = await User.findOne({ _id: req.userId });
       if (!user) {
         res.status(404).json({ error: "User not found" });
         return;
@@ -88,7 +88,7 @@ router.patch(
       }
 
       const user = await User.findOneAndUpdate(
-        { googleId: req.userId },
+        { _id: req.userId },
         { $set: flatSet },
         { new: true },
       );
@@ -112,7 +112,7 @@ router.delete(
 
       // Delete all user data in parallel (best-effort — don't block on failures)
       await Promise.allSettled([
-        User.deleteOne({ googleId: userId }),
+        User.deleteOne({ _id: userId }),
         WorkoutSession.deleteMany({ userId }),
         WorkoutPlan.deleteMany({ userId }),
         Task.deleteMany({ userId }),

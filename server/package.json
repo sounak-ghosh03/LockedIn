@@ -10,6 +10,9 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
+    "@sentry/node": "^8.14.0",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
@@ -18,8 +21,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.4",
-    "zod": "^3.23.8",
-    "@sentry/node": "^8.14.0"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

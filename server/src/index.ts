@@ -3,13 +3,21 @@ import dotenv from "dotenv";
 // ─── Startup env validation — fail fast with a clear error ───────────────────
 dotenv.config();
 
-const REQUIRED_ENV = ["MONGO_URI", "GOOGLE_CLIENT_ID", "JWT_SECRET"] as const;
+const REQUIRED_ENV = ["MONGO_URI", "JWT_SECRET"] as const;
 
 for (const key of REQUIRED_ENV) {
   if (!process.env[key]) {
     console.error(`[STARTUP] Missing required environment variable: ${key}`);
     process.exit(1);
   }
+}
+
+// Google OAuth is optional — if GOOGLE_CLIENT_ID is absent, POST /auth/google
+// returns a 500 with a descriptive message. Email/password auth works regardless.
+if (!process.env.GOOGLE_CLIENT_ID) {
+  console.warn(
+    "[STARTUP] GOOGLE_CLIENT_ID is not set — Google OAuth will be unavailable.",
+  );
 }
 
 // ─── Now safe to import everything that reads env vars ────────────────────────

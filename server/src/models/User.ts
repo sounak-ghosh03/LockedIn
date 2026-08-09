@@ -1,10 +1,12 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IUser extends Document {
-  googleId: string;
+  googleId?: string; // present for Google-authenticated users
   email: string;
   name: string;
   picture: string;
+  password?: string; // bcrypt hash — present for email/password users, empty for Google users
+  authProvider: "google" | "email";
   goals: { weightKg: number; bodyFat: number; dailyCalories: number };
   units: "metric" | "imperial";
   aiProvider: "gemini" | "openai" | "both";
@@ -16,10 +18,25 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>(
   {
-    googleId: { type: String, required: true, unique: true, index: true },
-    email: { type: String, required: true },
+    // Optional — only present for Google-authenticated accounts
+    // sparse: true means null/undefined values are not indexed, so multiple
+    // email-only users can exist without violating uniqueness
+    googleId: { type: String, sparse: true, unique: true, index: true },
+
+    email: { type: String, required: true, unique: true },
     name: { type: String, default: "" },
     picture: { type: String, default: "" },
+
+    // bcrypt hash — empty string for Google-only accounts; never returned to client
+    password: { type: String, default: "" },
+
+    // Which method was used to create this account
+    authProvider: {
+      type: String,
+      enum: ["google", "email"],
+      default: "email",
+    },
+
     goals: {
       weightKg: { type: Number, default: 75 },
       bodyFat: { type: Number, default: 15 },

@@ -24,7 +24,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export interface AppUser {
   id: string;
-  googleId: string;
+  googleId: string | null;
   email: string;
   name: string;
   picture: string;
@@ -39,6 +39,15 @@ export interface AppUser {
 interface AuthContextValue {
   user: AppUser | null;
   isLoading: boolean;
+  /** Primary: email/password login */
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  /** Primary: email/password registration */
+  signUpWithEmail: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
+  /** Secondary: trigger Google OAuth flow */
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -63,11 +72,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // expo-auth-session Google provider
   const [_request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: EXPO_CLIENT_ID,
+    clientId: EXPO_CLIENT_ID,
     androidClientId: ANDROID_CLIENT_ID,
   });
 
-  // ─── On mount: check for stored session ────────────────────────────────────
+  // ─── Helper: finalise auth after receiving { token, user } ────────────────
+
+  const finaliseAuth = useCallback(
+    async (result: { token: string; user: AppUser }) => {
+      await storeToken(result.token);
+      setUser(result.user);
+      hydrateSettings({
+        units: result.user.units,
+        aiProvider: result.user.aiProvider,
+        restTimerDefaultSeconds: result.user.restTimerDefaultSeconds,
+      });
+    },
+    [hydrateSettings],
+  );
+
+  // ─── On mount: restore session from SecureStore ───────────────────────────
+
   useEffect(() => {
     (async () => {
       const token = await getStoredToken();
@@ -95,7 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Handle Google auth response ──────────────────────────────────────────
+  // ─── Handle Google OAuth response ────────────────────────────────────────
+
   useEffect(() => {
     if (response?.type === "success") {
       const idToken = response.authentication?.idToken;
@@ -115,30 +141,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           { idToken },
           { skipAuth: true },
         );
-        await storeToken(result.token);
-        setUser(result.user);
-        hydrateSettings({
-          units: result.user.units,
-          aiProvider: result.user.aiProvider,
-          restTimerDefaultSeconds: result.user.restTimerDefaultSeconds,
-        });
+        await finaliseAuth(result);
       } catch (err) {
         console.error("[auth] Google token exchange failed:", err);
       } finally {
         setIsLoading(false);
       }
     },
-    [hydrateSettings],
+    [finaliseAuth],
   );
+
+  // ─── Primary: email/password login ───────────────────────────────────────
+
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      setIsLoading(true);
+      try {
+        const result = await api.post<{ token: string; user: AppUser }>(
+          "/auth/login",
+          { email, password },
+          { skipAuth: true },
+        );
+        await finaliseAuth(result);
+      } finally {
+        // Errors propagate to the screen — do NOT swallow them here
+        setIsLoading(false);
+      }
+    },
+    [finaliseAuth],
+  );
+
+  // ─── Primary: email/password registration ────────────────────────────────
+
+  const signUpWithEmail = useCallback(
+    async (name: string, email: string, password: string) => {
+      setIsLoading(true);
+      try {
+        const result = await api.post<{ token: string; user: AppUser }>(
+          "/auth/register",
+          { name, email, password, confirmPassword: password },
+          { skipAuth: true },
+        );
+        await finaliseAuth(result);
+      } finally {
+        // Errors propagate to the screen — do NOT swallow them here
+        setIsLoading(false);
+      }
+    },
+    [finaliseAuth],
+  );
+
+  // ─── Secondary: Google OAuth ──────────────────────────────────────────────
 
   const signIn = useCallback(async () => {
     await promptAsync();
   }, [promptAsync]);
 
+  // ─── Logout ───────────────────────────────────────────────────────────────
+
   const signOut = useCallback(async () => {
     await clearToken();
     setUser(null);
   }, []);
+
+  // ─── Refresh current user profile ────────────────────────────────────────
 
   const refreshUser = useCallback(async () => {
     try {
@@ -156,7 +222,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, signIn, signOut, refreshUser }}
+      value={{
+        user,
+        isLoading,
+        signInWithEmail,
+        signUpWithEmail,
+        signIn,
+        signOut,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

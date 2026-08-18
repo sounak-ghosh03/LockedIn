@@ -15,7 +15,8 @@ import {
   ApiError,
 } from "../api/client";
 import { useSettingsStore } from "../store/settingsStore";
-import { startOfflineQueueSync } from "../api/offlineQueue";
+import { startOfflineQueueSync, flushQueue } from "../api/offlineQueue";
+import { startBackgroundSync, stopBackgroundSync } from "../api/backgroundSync";
 
 // Required by expo-auth-session on Android
 WebBrowser.maybeCompleteAuthSession();
@@ -36,9 +37,27 @@ export interface AppUser {
   openaiApiKey?: string; // "••••••••" if set, "" if not
 }
 
+/**
+ * Sync state for the background synchronisation loop.
+ * Kept separate from authentication state so that a background request
+ * never causes a global loading screen.
+ *
+ * - idle    — no sync in progress
+ * - syncing — background cycle running
+ * - error   — last cycle failed (transient); will retry next cycle
+ */
+export type SyncState = "idle" | "syncing" | "error";
+
 interface AuthContextValue {
   user: AppUser | null;
+  /**
+   * True only during the initial startup authentication check.
+   * AuthGate uses this to show its one-time loading spinner.
+   * It is NOT set during background sync or user-triggered actions.
+   */
   isLoading: boolean;
+  /** Current state of the ~1-minute background sync loop. */
+  syncState: SyncState;
   /** Primary: email/password login */
   signInWithEmail: (email: string, password: string) => Promise<void>;
   /** Primary: email/password registration */
@@ -67,7 +86,20 @@ const ANDROID_CLIENT_ID =
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  /**
+   * isInitializing — true only while the startup GET /me check is in flight.
+   * Once it resolves (success or failure) this is set to false and never
+   * goes back to true.  The AuthGate spinner is driven by this flag.
+   */
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  /**
+   * syncState — reflects the background ~1-minute sync loop only.
+   * The UI must never show a full-screen spinner based on this value.
+   */
+  const [syncState, setSyncState] = useState<SyncState>("idle");
+
   const hydrateSettings = useSettingsStore((s) => s.hydrate);
 
   // expo-auth-session Google provider
@@ -76,19 +108,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     androidClientId: ANDROID_CLIENT_ID,
   });
 
+  // ─── Helper: apply user + settings after any successful auth ──────────────
+
+  const applyUser = useCallback(
+    (u: AppUser) => {
+      setUser(u);
+      hydrateSettings({
+        units: u.units,
+        aiProvider: u.aiProvider,
+        restTimerDefaultSeconds: u.restTimerDefaultSeconds,
+      });
+    },
+    [hydrateSettings],
+  );
+
+  // ─── Background sync callback (runs every ~1 minute) ──────────────────────
+
+  /**
+   * One sync cycle: re-validate the session and flush any offline writes.
+   * Errors are NOT caught here — they propagate to backgroundSync.ts which
+   * handles them correctly (401 → sign-out, other → retry next cycle).
+   */
+  const runBackgroundSync = useCallback(async () => {
+    setSyncState("syncing");
+    try {
+      const me = await api.get<AppUser>("/me");
+      applyUser(me);
+      await flushQueue().catch(() => {
+        // Queue flush failures are non-critical — offlineQueue handles its own
+        // retry logic on the next flush call.
+      });
+      setSyncState("idle");
+    } catch (err) {
+      setSyncState("error");
+      // Re-throw so backgroundSync.ts can classify the error correctly.
+      throw err;
+    }
+  }, [applyUser]);
+
   // ─── Helper: finalise auth after receiving { token, user } ────────────────
 
   const finaliseAuth = useCallback(
     async (result: { token: string; user: AppUser }) => {
       await storeToken(result.token);
-      setUser(result.user);
-      hydrateSettings({
-        units: result.user.units,
-        aiProvider: result.user.aiProvider,
-        restTimerDefaultSeconds: result.user.restTimerDefaultSeconds,
+      applyUser(result.user);
+      // Start (or update) the background sync loop now that we are authenticated.
+      // startBackgroundSync is idempotent — safe to call on every login.
+      startBackgroundSync(runBackgroundSync, async () => {
+        // This is called only when the server explicitly returns 401,
+        // meaning the JWT is truly invalid/expired — sign the user out.
+        await clearToken();
+        setUser(null);
+        setSyncState("idle");
       });
     },
-    [hydrateSettings],
+    [applyUser, runBackgroundSync],
   );
 
   // ─── On mount: restore session from SecureStore ───────────────────────────
@@ -99,24 +173,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         try {
           const me = await api.get<AppUser>("/me");
-          setUser(me);
-          hydrateSettings({
-            units: me.units,
-            aiProvider: me.aiProvider,
-            restTimerDefaultSeconds: me.restTimerDefaultSeconds,
+          applyUser(me);
+          // Session is valid — start background sync.
+          startBackgroundSync(runBackgroundSync, async () => {
+            await clearToken();
+            setUser(null);
+            setSyncState("idle");
           });
         } catch (err) {
           if (err instanceof ApiError && err.status === 401) {
-            // Token expired — force re-login
+            // Token is expired/invalid — force re-login.
             await clearToken();
           }
+          // Any other error (network down, server unavailable) is treated as
+          // "cannot confirm auth right now" — we leave the token in SecureStore
+          // and send the user to login so they can explicitly retry.
         }
       }
-      setIsLoading(false);
+      // Initial check complete — release the AuthGate spinner.
+      setIsInitializing(false);
     })();
-    // Start offline queue sync
+
+    // Start offline queue sync listener (flushes when back online).
+    // Owned here — do NOT start it again in _layout.tsx.
     const stopSync = startOfflineQueueSync();
-    return stopSync;
+    return () => {
+      stopSync();
+      // Do NOT stop the background sync timer here — this effect runs once on
+      // mount/unmount of AuthProvider which lives for the app lifetime.
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -134,7 +219,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const exchangeGoogleToken = useCallback(
     async (idToken: string) => {
-      setIsLoading(true);
+      // Note: NOT setting isLoading here — button-level loading is handled
+      // by the login screen; the global gate must not block during this.
       try {
         const result = await api.post<{ token: string; user: AppUser }>(
           "/auth/google",
@@ -144,8 +230,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await finaliseAuth(result);
       } catch (err) {
         console.error("[auth] Google token exchange failed:", err);
-      } finally {
-        setIsLoading(false);
       }
     },
     [finaliseAuth],
@@ -155,18 +239,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = useCallback(
     async (email: string, password: string) => {
-      setIsLoading(true);
-      try {
-        const result = await api.post<{ token: string; user: AppUser }>(
-          "/auth/login",
-          { email, password },
-          { skipAuth: true },
-        );
-        await finaliseAuth(result);
-      } finally {
-        // Errors propagate to the screen — do NOT swallow them here
-        setIsLoading(false);
-      }
+      // Errors propagate to the screen — do NOT swallow them here.
+      // NOT setting isLoading — button-level loading is on the screen.
+      const result = await api.post<{ token: string; user: AppUser }>(
+        "/auth/login",
+        { email, password },
+        { skipAuth: true },
+      );
+      await finaliseAuth(result);
     },
     [finaliseAuth],
   );
@@ -175,18 +255,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUpWithEmail = useCallback(
     async (name: string, email: string, password: string) => {
-      setIsLoading(true);
-      try {
-        const result = await api.post<{ token: string; user: AppUser }>(
-          "/auth/register",
-          { name, email, password, confirmPassword: password },
-          { skipAuth: true },
-        );
-        await finaliseAuth(result);
-      } finally {
-        // Errors propagate to the screen — do NOT swallow them here
-        setIsLoading(false);
-      }
+      // Errors propagate to the screen — do NOT swallow them here.
+      const result = await api.post<{ token: string; user: AppUser }>(
+        "/auth/register",
+        { name, email, password, confirmPassword: password },
+        { skipAuth: true },
+      );
+      await finaliseAuth(result);
     },
     [finaliseAuth],
   );
@@ -200,31 +275,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ─── Logout ───────────────────────────────────────────────────────────────
 
   const signOut = useCallback(async () => {
+    // Stop the background sync before clearing credentials so that no
+    // authenticated request fires after the token has been removed.
+    stopBackgroundSync();
     await clearToken();
     setUser(null);
+    setSyncState("idle");
   }, []);
 
-  // ─── Refresh current user profile ────────────────────────────────────────
+  // ─── Refresh current user profile (on-demand) ────────────────────────────
 
   const refreshUser = useCallback(async () => {
     try {
       const me = await api.get<AppUser>("/me");
-      setUser(me);
-      hydrateSettings({
-        units: me.units,
-        aiProvider: me.aiProvider,
-        restTimerDefaultSeconds: me.restTimerDefaultSeconds,
-      });
+      applyUser(me);
     } catch {
-      // Silent fail on refresh
+      // Silent fail on refresh — background sync will retry shortly.
     }
-  }, [hydrateSettings]);
+  }, [applyUser]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isLoading,
+        // Expose isInitializing as isLoading so all existing consumers
+        // compile unchanged.  It is true ONLY during the startup check.
+        isLoading: isInitializing,
+        syncState,
         signInWithEmail,
         signUpWithEmail,
         signIn,

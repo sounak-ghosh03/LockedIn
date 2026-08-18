@@ -18,7 +18,6 @@ import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
 import { AuthProvider, useAuthContext } from "../auth/AuthProvider";
 import { ErrorBoundary } from "../components/ui/ErrorBoundary";
-import { startOfflineQueueSync } from "../api/offlineQueue";
 import { colors } from "../constants/theme";
 
 // Configure how notifications appear when app is in foreground
@@ -101,12 +100,6 @@ export default function RootLayout() {
   // Request notification permissions on first launch (non-blocking)
   useEffect(() => {
     Notifications.requestPermissionsAsync().catch(() => {});
-  }, []);
-
-  // Start offline queue sync listener (flushes when back online)
-  useEffect(() => {
-    const stop = startOfflineQueueSync();
-    return stop;
   }, []);
 
   if (!fontsLoaded) {

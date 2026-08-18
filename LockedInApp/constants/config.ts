@@ -49,3 +49,9 @@ export const OFFLINE_QUEUE = {
   maxSize: 100,
   maxAgeMs: 7 * 24 * 60 * 60 * 1000, // 7 days
 } as const;
+
+// Background synchronisation interval
+// Runs once per cycle after the initial authentication is complete.
+// Covers: session re-validation (GET /me), offline-queue flush,
+// and any other periodic backend operations.
+export const BACKGROUND_SYNC_INTERVAL_MS = 60_000; // ~1 minute

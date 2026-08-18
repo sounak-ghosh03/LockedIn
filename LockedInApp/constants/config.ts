@@ -1,7 +1,39 @@
-// Backend API base URL — update this to your Render/Railway URL for production
+// ─── Backend API base URL ───────────────────────────────────────────────────
+//
+// Credentials are loaded from environment variables so they are never
+// hard-coded in source control.  Copy .env.example → .env and fill in
+// your values before running the app.
+//
+// Expo natively supports variables prefixed with EXPO_PUBLIC_:
+//   https://docs.expo.dev/guides/environment-variables/
+//
+// DEV:  Set EXPO_PUBLIC_DEV_MACHINE_IP to your computer's local network IP so
+//       that physical devices (phones running Expo Go) can reach the dev server.
+//       Find it with `ipconfig` (Windows) or `ifconfig` (Mac/Linux).
+//         e.g. "192.168.1.42"  — NOT "10.0.2.2" (Android emulator only)
+//
+// PROD: Set EXPO_PUBLIC_PROD_API_URL to your hosted backend URL.
+
+const DEV_MACHINE_IP = process.env.EXPO_PUBLIC_DEV_MACHINE_IP;
+const PROD_API_URL = process.env.EXPO_PUBLIC_PROD_API_URL;
+
+if (__DEV__ && !DEV_MACHINE_IP) {
+  console.warn(
+    "[config] EXPO_PUBLIC_DEV_MACHINE_IP is not set. " +
+      "Copy .env.example to .env and fill in your machine's LAN IP.",
+  );
+}
+
+if (!__DEV__ && !PROD_API_URL) {
+  console.warn(
+    "[config] EXPO_PUBLIC_PROD_API_URL is not set. " +
+      "Ensure the variable is configured in your EAS build environment or .env file.",
+  );
+}
+
 export const API_BASE_URL = __DEV__
-  ? "http://10.0.2.2:3000" // Android emulator → localhost
-  : "https://your-backend.onrender.com"; // ← replace before building APK
+  ? `http://${DEV_MACHINE_IP}:3000`
+  : (PROD_API_URL ?? "");
 
 // TanStack Query stale times
 export const STALE_TIMES = {

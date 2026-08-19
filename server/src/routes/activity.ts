@@ -24,9 +24,19 @@ router.get(
     try {
       const userId = req.userId!;
       const now = new Date();
-      const from = new Date(now);
-      from.setFullYear(from.getFullYear() - 1);
-      from.setHours(0, 0, 0, 0);
+      // Build `from` as exactly 365 days ago at UTC midnight so the window
+      // is timezone-independent regardless of where the server is running.
+      const from = new Date(
+        Date.UTC(
+          now.getUTCFullYear() - 1,
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          0,
+          0,
+          0,
+          0,
+        ),
+      );
 
       // Aggregate workout sessions per calendar day
       const workoutAgg = await WorkoutSession.aggregate([

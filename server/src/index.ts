@@ -67,7 +67,7 @@ app.use(helmet());
 // ─── CORS — lock to nothing (no browser client) ───────────────────────────────
 app.use(
   cors({
-    origin: false, // disables CORS for all browser origins; only native/server clients allowed
+    origin: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   }),
 );

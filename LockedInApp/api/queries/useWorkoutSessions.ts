@@ -53,7 +53,10 @@ export function useSaveWorkoutSession() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workoutSessions"] });
-      qc.invalidateQueries({ queryKey: ["heatmap"] });
+      // Force an immediate refetch (not just mark-stale) so the home-screen
+      // heatmap updates as soon as the user navigates back, regardless of the
+      // 15-minute staleTime on that query.
+      qc.refetchQueries({ queryKey: ["heatmap"] });
     },
   });
 }

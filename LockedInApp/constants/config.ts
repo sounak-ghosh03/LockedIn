@@ -41,7 +41,7 @@ export const STALE_TIMES = {
   measurements: 10 * 60 * 1000, // 10 min
   nutritionLogs: 5 * 60 * 1000,
   tasks: 2 * 60 * 1000,
-  heatmap: 15 * 60 * 1000,
+  heatmap: 0, // always refetch — home screen must reflect latest activity immediately
 } as const;
 
 // Offline queue settings

@@ -162,7 +162,10 @@ export default function HomeScreen() {
   const { data: heatmapData = [] } = useQuery<HeatmapDay[]>({
     queryKey: ["heatmap"],
     queryFn: () => api.get("/activity/heatmap"),
-    staleTime: 15 * 60 * 1000,
+    // staleTime: 0 means the query is always considered stale, so it refetches
+    // whenever the home tab comes into focus — ensuring today's workout/session
+    // is immediately reflected without waiting for a 15-min cache window.
+    staleTime: 0,
   });
 
   // Pending tasks (today only)
@@ -369,7 +372,7 @@ export default function HomeScreen() {
             style={styles.shortcutCard}
             onPress={() => router.push("/timer")}
           >
-            <Text style={styles.shortcutIcon}>⏱</Text>
+            <Text style={styles.shortcutIcon}>🕛</Text>
             <Text style={styles.shortcutLabel}>Timer</Text>
           </TouchableOpacity>
           <TouchableOpacity

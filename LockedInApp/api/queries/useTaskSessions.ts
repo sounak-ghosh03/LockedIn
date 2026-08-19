@@ -80,7 +80,7 @@ export function useSaveTaskSession() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["taskSessions"] });
-      qc.invalidateQueries({ queryKey: ["heatmap"] });
+      qc.refetchQueries({ queryKey: ["heatmap"] });
     },
   });
 }

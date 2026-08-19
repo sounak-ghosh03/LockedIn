@@ -116,7 +116,7 @@ app.use(errorHandler);
 
 // ─── Connect to DB then start listening ──────────────────────────────────────
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`[server] LockedIn API running on port ${PORT}`);
   });
 });

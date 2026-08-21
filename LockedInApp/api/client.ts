@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import { API_BASE_URL } from "../constants/config";
 
 const SESSION_TOKEN_KEY = "lockedin_session_token";
+const USER_CACHE_KEY = "lockedin_user_cache";
 const REQUEST_TIMEOUT_MS = 10_000;
 
 // ─── Token management ─────────────────────────────────────────────────────────
@@ -20,6 +21,37 @@ export async function storeToken(token: string): Promise<void> {
 
 export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(SESSION_TOKEN_KEY);
+}
+
+// ─── User profile cache ───────────────────────────────────────────────────────
+// Persists a lightweight snapshot of the user so the app can restore state
+// instantly on startup without waiting for a network round-trip.
+
+export async function storeUserCache(user: object): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(USER_CACHE_KEY, JSON.stringify(user));
+  } catch {
+    // Non-critical — a missing cache just means no instant restore next open.
+  }
+}
+
+export async function getCachedUser<T>(): Promise<T | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(USER_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearUserCache(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(USER_CACHE_KEY);
+  } catch {
+    // Silent — if deletion fails the stale cache will simply be overwritten on
+    // next successful login or background sync.
+  }
 }
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────

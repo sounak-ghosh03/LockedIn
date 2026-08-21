@@ -12,6 +12,9 @@ import {
   getStoredToken,
   storeToken,
   clearToken,
+  storeUserCache,
+  getCachedUser,
+  clearUserCache,
   ApiError,
 } from "../api/client";
 import { useSettingsStore } from "../store/settingsStore";
@@ -134,6 +137,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await api.get<AppUser>("/me");
       applyUser(me);
+      // Keep the local cache fresh so the next app open gets an up-to-date profile.
+      await storeUserCache(me);
       await flushQueue().catch(() => {
         // Queue flush failures are non-critical — offlineQueue handles its own
         // retry logic on the next flush call.
@@ -151,6 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const finaliseAuth = useCallback(
     async (result: { token: string; user: AppUser }) => {
       await storeToken(result.token);
+      // Persist the profile so the next app open can restore instantly.
+      await storeUserCache(result.user);
       applyUser(result.user);
       // Start (or update) the background sync loop now that we are authenticated.
       // startBackgroundSync is idempotent — safe to call on every login.
@@ -158,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // This is called only when the server explicitly returns 401,
         // meaning the JWT is truly invalid/expired — sign the user out.
         await clearToken();
+        await clearUserCache();
         setUser(null);
         setSyncState("idle");
       });
@@ -166,32 +174,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ─── On mount: restore session from SecureStore ───────────────────────────
+  //
+  // Optimistic restore strategy:
+  //   1. If a token + cached profile exist → apply the cache immediately (zero
+  //      network wait), release the spinner, let the user into the app, then
+  //      silently validate the token with GET /me in the background.
+  //      • 401 from server  → clear everything, redirect to login.
+  //      • Network error    → ignore; user stays in the app with cached data.
+  //   2. If a token exists but no cache → block once to fetch /me (first open
+  //      after an upgrade, or cache was cleared).
+  //   3. No token → release spinner immediately, AuthGate redirects to login.
 
   useEffect(() => {
     (async () => {
       const token = await getStoredToken();
+
       if (token) {
-        try {
-          const me = await api.get<AppUser>("/me");
-          applyUser(me);
-          // Session is valid — start background sync.
+        const cached = await getCachedUser<AppUser>();
+
+        if (cached) {
+          // ── Fast path: restore from cache, open app instantly ──────────────
+          applyUser(cached);
+          setIsInitializing(false); // spinner gone — user is in the app
+
+          // Start the background sync loop; it will also re-validate the token.
           startBackgroundSync(runBackgroundSync, async () => {
             await clearToken();
+            await clearUserCache();
             setUser(null);
             setSyncState("idle");
           });
-        } catch (err) {
-          if (err instanceof ApiError && err.status === 401) {
-            // Token is expired/invalid — force re-login.
-            await clearToken();
+
+          // Fire a one-off background validation so stale cache gets refreshed
+          // immediately on this open (rather than waiting for the first sync tick).
+          api.get<AppUser>("/me")
+            .then(async (me) => {
+              applyUser(me);
+              await storeUserCache(me);
+            })
+            .catch(async (err) => {
+              if (err instanceof ApiError && err.status === 401) {
+                // JWT is genuinely invalid — force re-login.
+                stopBackgroundSync();
+                await clearToken();
+                await clearUserCache();
+                setUser(null);
+                setSyncState("idle");
+              }
+              // Any other error (network down, 5xx) is transient — ignore and
+              // let the background sync loop retry on its next cycle.
+            });
+        } else {
+          // ── Slow path: no cache, block once to fetch profile ───────────────
+          // (First open after install, app upgrade, or cache eviction.)
+          try {
+            const me = await api.get<AppUser>("/me");
+            applyUser(me);
+            await storeUserCache(me); // prime the cache for all future opens
+            startBackgroundSync(runBackgroundSync, async () => {
+              await clearToken();
+              await clearUserCache();
+              setUser(null);
+              setSyncState("idle");
+            });
+          } catch (err) {
+            if (err instanceof ApiError && err.status === 401) {
+              // Token is expired/invalid — force re-login.
+              await clearToken();
+              await clearUserCache();
+            }
+            // Any other error: leave the token in SecureStore so the next
+            // open can retry; fall through to release the spinner.
           }
-          // Any other error (network down, server unavailable) is treated as
-          // "cannot confirm auth right now" — we leave the token in SecureStore
-          // and send the user to login so they can explicitly retry.
+          setIsInitializing(false);
         }
+      } else {
+        // No token at all — release spinner, AuthGate will redirect to login.
+        setIsInitializing(false);
       }
-      // Initial check complete — release the AuthGate spinner.
-      setIsInitializing(false);
     })();
 
     // Start offline queue sync listener (flushes when back online).
@@ -279,6 +339,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // authenticated request fires after the token has been removed.
     stopBackgroundSync();
     await clearToken();
+    await clearUserCache(); // remove cached profile so the next open goes to login
     setUser(null);
     setSyncState("idle");
   }, []);

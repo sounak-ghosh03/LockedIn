@@ -82,11 +82,11 @@ export async function verifyGoogleIdToken(idToken: string): Promise<{
 }
 
 /**
- * Issue a 7-day session JWT.
+ * Issue a 15-day session JWT.
  * @param mongoId  The Mongo _id string of the authenticated user.
  */
 export function issueSessionJWT(mongoId: string): string {
   return jwt.sign({ sub: mongoId }, process.env.JWT_SECRET!, {
-    expiresIn: "7d",
+    expiresIn: "15d",
   });
 }

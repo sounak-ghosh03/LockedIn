@@ -145,28 +145,44 @@ export default function WorkoutSessionDetailScreen() {
                 </View>
                 {ex.sets
                   .filter((s) => s.completed)
-                  .map((s, si) => (
-                    <View key={si} style={styles.setRow}>
-                      <Text style={[styles.setCellNum, { flex: 0, width: 32 }]}>
-                        {s.setNumber}
-                      </Text>
-                      <Text style={styles.setCell}>{s.weightKg} kg</Text>
-                      <Text style={styles.setCell}>{s.reps}</Text>
-                      <Text style={styles.setCell}>
-                        {s.weightKg * s.reps} kg
-                      </Text>
-                      {s.isNewPR ? (
-                        <View style={styles.prDot} />
-                      ) : (
+                  .map((s) => {
+                    const weight = Number(s.weightKg) || 0;
+                    const reps = Number(s.reps) || 0;
+                    const volume = weight * reps;
+
+                    // Prevent values like 12.50000000001
+                    const formatNumber = (value: number) =>
+                      Number.isInteger(value)
+                        ? value.toString()
+                        : value.toFixed(2).replace(/\.?0+$/, "");
+
+                    return (
+                      <View key={s.setNumber} style={styles.setRow}>
+                        <Text
+                          style={[styles.setCellNum, { flex: 0, width: 32 }]}
+                        >
+                          {s.setNumber}
+                        </Text>
+
+                        <Text style={styles.setCell}>
+                          {formatNumber(weight)} kg
+                        </Text>
+
+                        <Text style={styles.setCell}>{formatNumber(reps)}</Text>
+
+                        <Text style={styles.setCell}>
+                          {formatNumber(volume)} kg
+                        </Text>
+
                         <View
                           style={[
                             styles.prDot,
-                            { backgroundColor: "transparent" },
+                            !s.isNewPR && { backgroundColor: "transparent" },
                           ]}
                         />
-                      )}
-                    </View>
-                  ))}
+                      </View>
+                    );
+                  })}
               </View>
 
               {ex.notes ? (

@@ -13,6 +13,7 @@ import { colors, fontSize, spacing, radius } from "../../constants/theme";
 import type { ExerciseLog } from "../../store/workoutStore";
 import { useWorkoutStore } from "../../store/workoutStore";
 import { useSettingsStore } from "../../store/settingsStore";
+import { formatNum } from "../../utils/formatNumber";
 
 interface ExerciseCardProps {
   exercise: ExerciseLog;
@@ -53,7 +54,7 @@ export const ExerciseCard = React.memo(function ExerciseCard({
   const completedCount = exercise.sets.filter((s) => s.completed).length;
   const totalVolume = exercise.sets
     .filter((s) => s.completed)
-    .reduce((sum, s) => sum + s.weightKg * s.reps, 0);
+    .reduce((sum, s) => sum + Number(s.weightKg) * Number(s.reps), 0);
 
   return (
     <View style={styles.card}>
@@ -66,7 +67,7 @@ export const ExerciseCard = React.memo(function ExerciseCard({
               {completedCount}/{exercise.sets.length} sets
             </Text>
             {totalVolume > 0 && (
-              <Text style={styles.volume}>· {totalVolume} kg</Text>
+              <Text style={styles.volume}>· {formatNum(totalVolume)} kg</Text>
             )}
             {isPR && <Badge label="🏆 PR" variant="warning" />}
           </View>
@@ -107,7 +108,7 @@ export const ExerciseCard = React.memo(function ExerciseCard({
       {/* Sets */}
       {exercise.sets.map((set, si) => (
         <SetRow
-          key={si}
+          key={set.setNumber}
           set={set}
           exerciseIdx={exerciseIdx}
           setIdx={si}

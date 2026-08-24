@@ -13,6 +13,7 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { useWorkoutSessions } from "../../api/queries/useWorkoutSessions";
 import { colors, fontSize, spacing, radius } from "../../constants/theme";
+import { formatNum, formatWeight } from "../../utils/formatNumber";
 
 export default function WorkoutSessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -75,7 +76,7 @@ export default function WorkoutSessionDetailScreen() {
               },
               {
                 icon: "🏋️",
-                value: `${session.totalVolumeKg} kg`,
+                value: formatWeight(Number(session.totalVolumeKg)),
                 label: "Volume",
               },
               {
@@ -112,7 +113,7 @@ export default function WorkoutSessionDetailScreen() {
         {session.exercises.map((ex, ei) => {
           const completedSets = ex.sets.filter((s) => s.completed);
           const totalVolume = completedSets.reduce(
-            (s, st) => s + st.weightKg * st.reps,
+            (s, st) => s + Number(st.weightKg) * Number(st.reps),
             0,
           );
           const hasPR = ex.sets.some((s) => s.isNewPR);
@@ -125,7 +126,7 @@ export default function WorkoutSessionDetailScreen() {
                   <View style={styles.exerciseMeta}>
                     <Text style={styles.exerciseStat}>
                       {completedSets.length} set
-                      {completedSets.length !== 1 ? "s" : ""} · {totalVolume} kg
+                      {completedSets.length !== 1 ? "s" : ""} · {formatWeight(totalVolume)}
                     </Text>
                     {hasPR && <Badge label="🏆 PR" variant="warning" />}
                   </View>
@@ -146,15 +147,11 @@ export default function WorkoutSessionDetailScreen() {
                 {ex.sets
                   .filter((s) => s.completed)
                   .map((s) => {
-                    const weight = Number(s.weightKg) || 0;
-                    const reps = Number(s.reps) || 0;
-                    const volume = weight * reps;
-
-                    // Prevent values like 12.50000000001
-                    const formatNumber = (value: number) =>
-                      Number.isInteger(value)
-                        ? value.toString()
-                        : value.toFixed(2).replace(/\.?0+$/, "");
+                    const weight = Number(s.weightKg);
+                    const reps = Number(s.reps);
+                    const volume = Number.isFinite(weight) && Number.isFinite(reps)
+                      ? weight * reps
+                      : 0;
 
                     return (
                       <View key={s.setNumber} style={styles.setRow}>
@@ -165,13 +162,13 @@ export default function WorkoutSessionDetailScreen() {
                         </Text>
 
                         <Text style={styles.setCell}>
-                          {formatNumber(weight)} kg
+                          {formatNum(weight)} kg
                         </Text>
 
-                        <Text style={styles.setCell}>{formatNumber(reps)}</Text>
+                        <Text style={styles.setCell}>{formatNum(reps)}</Text>
 
                         <Text style={styles.setCell}>
-                          {formatNumber(volume)} kg
+                          {formatNum(volume)} kg
                         </Text>
 
                         <View

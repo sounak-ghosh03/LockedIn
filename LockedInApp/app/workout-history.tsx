@@ -8,6 +8,7 @@ import { Card } from "../components/ui/Card";
 import { useWorkoutSessions } from "../api/queries/useWorkoutSessions";
 import { colors, fontSize, spacing, radius } from "../constants/theme";
 import type { WorkoutSessionData } from "../api/queries/useWorkoutSessions";
+import { formatNum } from "../utils/formatNumber";
 
 const SessionCard = React.memo(function SessionCard({
   session,
@@ -52,7 +53,7 @@ const SessionCard = React.memo(function SessionCard({
           />
           <StatChip
             icon="🏋️"
-            value={`${session.totalVolumeKg} kg`}
+            value={`${formatNum(Number(session.totalVolumeKg))} kg`}
             label="Volume"
           />
           <StatChip icon="✅" value={`${completedSets}`} label="Sets" />

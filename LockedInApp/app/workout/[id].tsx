@@ -33,6 +33,7 @@ import {
   useSaveWorkoutSession,
 } from "../../api/queries/useWorkoutSessions";
 import { checkPR } from "../../utils/prDetection";
+import { formatNum } from "../../utils/formatNumber";
 import { colors, fontSize, spacing, radius } from "../../constants/theme";
 
 function formatElapsed(ms: number): string {
@@ -150,7 +151,7 @@ export default function ActiveWorkoutScreen() {
 
     Alert.alert(
       "Finish Workout?",
-      `${formatElapsed(elapsed)} · ${totalVolume.toFixed(0)} kg total volume`,
+      `${formatElapsed(elapsed)} · ${formatNum(totalVolume)} kg total volume`,
       [
         { text: "Keep Going", style: "cancel" },
         {
@@ -176,7 +177,7 @@ export default function ActiveWorkoutScreen() {
                 planId: session.planId,
                 date: new Date().toISOString(),
                 durationMinutes,
-                totalVolumeKg: Math.round(totalVolume),
+                totalVolumeKg: parseFloat(totalVolume.toFixed(4)),
                 exercises: prExercises,
                 overallNotes: session.overallNotes,
               },
@@ -245,7 +246,7 @@ export default function ActiveWorkoutScreen() {
           <View style={styles.statsRow}>
             <Text style={styles.statText}>⏱ {formatElapsed(elapsed)}</Text>
             <Text style={styles.statSep}>·</Text>
-            <Text style={styles.statText}>🏋️ {totalVolume.toFixed(0)} kg</Text>
+            <Text style={styles.statText}>🏋️ {formatNum(totalVolume)} kg</Text>
           </View>
         </View>
 

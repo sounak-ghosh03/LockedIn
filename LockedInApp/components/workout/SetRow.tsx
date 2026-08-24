@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontSize, spacing, radius } from "../../constants/theme";
 import type { SetEntry } from "../../store/workoutStore";
+import { formatNum } from "../../utils/formatNumber";
 
 interface SetRowProps {
   set: SetEntry;
@@ -32,10 +33,51 @@ export const SetRow = React.memo(function SetRow({
   onRepsChange,
   onRestStart,
 }: SetRowProps) {
+  // ─── Local text state for weight input ───────────────────────────────────────
+  // We keep a local string so that mid-decimal typing (e.g. "12.") is preserved
+  // in the text field while the numeric store only sees the parsed value.
+  const [weightText, setWeightText] = useState(() =>
+    set.weightKg > 0 ? formatNum(Number(set.weightKg)) : "",
+  );
+
+  // Sync local text when the store value changes externally (e.g. addSet copies
+  // the previous set's weight, or session is hydrated from the API).
+  useEffect(() => {
+    const stored = Number(set.weightKg);
+    const local = parseFloat(weightText);
+    // Only overwrite if the store value genuinely differs from what we already
+    // have locally (avoids clobbering mid-typing states like "12.").
+    if (!Number.isNaN(stored) && stored !== local) {
+      setWeightText(stored > 0 ? formatNum(stored) : "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set.weightKg]);
+
+  const handleWeightTextChange = useCallback(
+    (v: string) => {
+      setWeightText(v);
+      // Parse the numeric value and push it to the store.
+      // parseFloat handles decimals correctly; empty / non-numeric → 0.
+      const parsed = parseFloat(v);
+      onWeightChange(exerciseIdx, setIdx, Number.isFinite(parsed) ? parsed : 0);
+    },
+    [onWeightChange, exerciseIdx, setIdx],
+  );
+
+  const handleRepsTextChange = useCallback(
+    (v: string) => {
+      // Reps stay integer — parseInt is appropriate here.
+      const parsed = parseInt(v, 10);
+      onRepsChange(exerciseIdx, setIdx, Number.isFinite(parsed) ? parsed : 0);
+    },
+    [onRepsChange, exerciseIdx, setIdx],
+  );
+
+  // Display label shown in the imperial weight column (read-only after completion).
   const weightLabel =
     units === "imperial"
-      ? `${(set.weightKg * 2.205).toFixed(1)} lbs`
-      : `${set.weightKg} kg`;
+      ? `${formatNum(Number(set.weightKg) * 2.205)} lbs`
+      : `${formatNum(Number(set.weightKg))} kg`;
 
   const handleToggle = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -54,8 +96,14 @@ export const SetRow = React.memo(function SetRow({
       {/* Weight input */}
       <TextInput
         style={[styles.input, set.completed && styles.inputDone]}
-        value={set.weightKg > 0 ? String(set.weightKg) : ""}
-        onChangeText={(v) => onWeightChange(exerciseIdx, setIdx, +v || 0)}
+        value={
+          set.completed
+            ? units === "imperial"
+              ? weightLabel
+              : formatNum(Number(set.weightKg))
+            : weightText
+        }
+        onChangeText={handleWeightTextChange}
         keyboardType="decimal-pad"
         placeholder="kg"
         placeholderTextColor={colors.textFaint}
@@ -69,8 +117,8 @@ export const SetRow = React.memo(function SetRow({
       {/* Reps input */}
       <TextInput
         style={[styles.input, set.completed && styles.inputDone]}
-        value={set.reps > 0 ? String(set.reps) : ""}
-        onChangeText={(v) => onRepsChange(exerciseIdx, setIdx, +v || 0)}
+        value={set.reps > 0 ? String(Number(set.reps)) : ""}
+        onChangeText={handleRepsTextChange}
         keyboardType="number-pad"
         placeholder="reps"
         placeholderTextColor={colors.textFaint}

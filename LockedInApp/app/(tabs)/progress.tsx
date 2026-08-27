@@ -39,8 +39,8 @@ import { useWorkoutSessions } from "../../api/queries/useWorkoutSessions";
 import { api } from "../../api/client";
 import { useSettingsStore } from "../../store/settingsStore";
 import {
-  useVolumeHistory,
-  useWeeklyFrequency,
+  getVolumeHistory,
+  getWeeklyFrequency,
   extractPRs,
   extractPRHistory,
   muscleGroupFrequency,
@@ -638,9 +638,9 @@ function AnalyticsContent() {
   const { data: sessions = [], isLoading: sessionsLoading } =
     useWorkoutSessions({ limit: 200 });
 
-  const volumeHistory = useMemo(() => useVolumeHistory(sessions), [sessions]);
+  const volumeHistory = useMemo(() => getVolumeHistory(sessions), [sessions]);
   const weeklyFrequency = useMemo(
-    () => useWeeklyFrequency(sessions),
+    () => getWeeklyFrequency(sessions),
     [sessions],
   );
   const prRecords = useMemo(() => extractPRs(sessions), [sessions]);

@@ -137,7 +137,6 @@ export default function TabLayout() {
                 color={color}
               />
             ),
-
           }}
         />
       ))}

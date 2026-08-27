@@ -397,7 +397,6 @@ export default function HomeScreen() {
               icon="💪"
               label="Workouts"
               value={stats.workoutsThisWeek}
-              suffix=" wk"
             />
             <StatCard
               icon="🧠"

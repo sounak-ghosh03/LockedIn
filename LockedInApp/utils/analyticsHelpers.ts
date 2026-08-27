@@ -16,7 +16,7 @@ interface PRRecord {
 }
 
 /** Volume per day from sessions — used for charts */
-export function useVolumeHistory(
+export function getVolumeHistory(
   sessions: WorkoutSessionData[],
 ): VolumePoint[] {
   const byDate: Record<string, VolumePoint> = {};
@@ -32,7 +32,7 @@ export function useVolumeHistory(
 }
 
 /** Weekly frequency — how many workouts per week */
-export function useWeeklyFrequency(
+export function getWeeklyFrequency(
   sessions: WorkoutSessionData[],
 ): Array<{ week: string; count: number }> {
   const byWeek: Record<string, number> = {};

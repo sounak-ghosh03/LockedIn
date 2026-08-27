@@ -8,6 +8,7 @@ export interface WorkoutPlan {
   exercises: Array<{
     exerciseId: string;
     name: string;
+    exerciseType?: "compound" | "isolation" | "cardio" | "bodyweight";
     targetSets: number;
     targetReps: number;
     targetWeight: number;

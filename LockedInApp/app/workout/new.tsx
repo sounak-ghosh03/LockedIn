@@ -134,6 +134,7 @@ export default function NewWorkoutPlanScreen() {
         exercises: selectedExercises.map((ex) => ({
           exerciseId: ex.id,
           name: ex.name,
+          exerciseType: ex.type,
           targetSets: +targetSets || 3,
           targetReps: +targetReps || 10,
           targetWeight: 0,

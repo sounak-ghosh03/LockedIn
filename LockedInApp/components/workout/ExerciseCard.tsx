@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Alert,
+  GestureResponderHandlers,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Badge } from "../ui/Badge";
@@ -20,6 +22,11 @@ interface ExerciseCardProps {
   exerciseIdx: number;
   isPR: boolean;
   onRestStart: () => void;
+  onDeleteExercise: (exerciseIdx: number) => void;
+  /** Pan handlers from the parent drag-sort wrapper, attached to the drag handle */
+  dragHandlePanHandlers?: GestureResponderHandlers;
+  /** Legacy callback — kept for API compat, not used when panHandlers provided */
+  onDragStart?: () => void;
 }
 
 export const ExerciseCard = React.memo(function ExerciseCard({
@@ -27,13 +34,19 @@ export const ExerciseCard = React.memo(function ExerciseCard({
   exerciseIdx,
   isPR,
   onRestStart,
+  onDeleteExercise,
+  dragHandlePanHandlers,
 }: ExerciseCardProps) {
   const [notesOpen, setNotesOpen] = useState(false);
+
+  const isCardio = exercise.exerciseType === "cardio";
 
   // Subscribe to specific store slices only — not the full store
   const toggleSetDone = useWorkoutStore((s) => s.toggleSetDone);
   const updateSetWeight = useWorkoutStore((s) => s.updateSetWeight);
   const updateSetReps = useWorkoutStore((s) => s.updateSetReps);
+  const updateSetSpeed = useWorkoutStore((s) => s.updateSetSpeed);
+  const updateSetIncline = useWorkoutStore((s) => s.updateSetIncline);
   const updateExerciseNotes = useWorkoutStore((s) => s.updateExerciseNotes);
   const addSet = useWorkoutStore((s) => s.addSet);
   const units = useSettingsStore((s) => s.units);
@@ -50,38 +63,100 @@ export const ExerciseCard = React.memo(function ExerciseCard({
     (ei: number, si: number, v: number) => updateSetReps(ei, si, v),
     [updateSetReps],
   );
+  const handleSpeedChange = useCallback(
+    (ei: number, si: number, v: number) => updateSetSpeed(ei, si, v),
+    [updateSetSpeed],
+  );
+  const handleInclineChange = useCallback(
+    (ei: number, si: number, v: number) => updateSetIncline(ei, si, v),
+    [updateSetIncline],
+  );
+
+  const handleDelete = useCallback(() => {
+    Alert.alert(
+      "Remove Exercise",
+      `Remove "${exercise.name}" from this workout?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => onDeleteExercise(exerciseIdx),
+        },
+      ],
+    );
+  }, [exercise.name, exerciseIdx, onDeleteExercise]);
 
   const completedCount = exercise.sets.filter((s) => s.completed).length;
-  const totalVolume = exercise.sets
-    .filter((s) => s.completed)
-    .reduce((sum, s) => sum + Number(s.weightKg) * Number(s.reps), 0);
+  const totalVolume = isCardio
+    ? 0
+    : exercise.sets
+        .filter((s) => s.completed)
+        .reduce((sum, s) => sum + Number(s.weightKg) * Number(s.reps), 0);
+
+  // For cardio, show avg speed across completed sets
+  const avgSpeed = isCardio
+    ? (() => {
+        const done = exercise.sets.filter(
+          (s) => s.completed && s.speedKmh && s.speedKmh > 0,
+        );
+        if (!done.length) return null;
+        const avg =
+          done.reduce((sum, s) => sum + (s.speedKmh ?? 0), 0) / done.length;
+        return formatNum(avg);
+      })()
+    : null;
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
+        {/* Drag handle — pan handlers attached here */}
+        <View style={styles.dragHandle} {...(dragHandlePanHandlers ?? {})}>
+          <Ionicons name="reorder-three" size={22} color={colors.textFaint} />
+        </View>
+
+        <View style={styles.headerCenter}>
           <Text style={styles.exerciseName}>{exercise.name}</Text>
           <View style={styles.badges}>
             <Text style={styles.progress}>
               {completedCount}/{exercise.sets.length} sets
             </Text>
-            {totalVolume > 0 && (
-              <Text style={styles.volume}>· {formatNum(totalVolume)} kg</Text>
+            {isCardio ? (
+              avgSpeed && (
+                <Text style={styles.volume}>· avg {avgSpeed} km/h</Text>
+              )
+            ) : (
+              totalVolume > 0 && (
+                <Text style={styles.volume}>· {formatNum(totalVolume)} kg</Text>
+              )
             )}
             {isPR && <Badge label="🏆 PR" variant="warning" />}
           </View>
         </View>
-        <TouchableOpacity
-          style={styles.notesBtn}
-          onPress={() => setNotesOpen((v) => !v)}
-        >
-          <Ionicons
-            name={notesOpen ? "create" : "create-outline"}
-            size={18}
-            color={notesOpen ? colors.accent : colors.textMuted}
-          />
-        </TouchableOpacity>
+
+        <View style={styles.headerActions}>
+          {/* Notes toggle */}
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => setNotesOpen((v) => !v)}
+          >
+            <Ionicons
+              name={notesOpen ? "create" : "create-outline"}
+              size={18}
+              color={notesOpen ? colors.accent : colors.textMuted}
+            />
+          </TouchableOpacity>
+
+          {/* Delete exercise */}
+          <TouchableOpacity style={styles.iconBtn} onPress={handleDelete}>
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={colors.error}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Notes */}
@@ -99,9 +174,19 @@ export const ExerciseCard = React.memo(function ExerciseCard({
       {/* Column headers */}
       <View style={styles.colHeaders}>
         <Text style={[styles.colHeader, { width: 20 }]}>SET</Text>
-        <Text style={[styles.colHeader, { flex: 1 }]}>WEIGHT</Text>
-        <Text style={[styles.colHeader, { width: 8 }]}> </Text>
-        <Text style={[styles.colHeader, { flex: 1 }]}>REPS</Text>
+        {isCardio ? (
+          <>
+            <Text style={[styles.colHeader, { flex: 1 }]}>SPEED</Text>
+            <Text style={[styles.colHeader, { width: 8 }]}> </Text>
+            <Text style={[styles.colHeader, { flex: 1 }]}>INCLINE</Text>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.colHeader, { flex: 1 }]}>WEIGHT</Text>
+            <Text style={[styles.colHeader, { width: 8 }]}> </Text>
+            <Text style={[styles.colHeader, { flex: 1 }]}>REPS</Text>
+          </>
+        )}
         <Text style={[styles.colHeader, { width: 32 }]}> </Text>
       </View>
 
@@ -113,9 +198,12 @@ export const ExerciseCard = React.memo(function ExerciseCard({
           exerciseIdx={exerciseIdx}
           setIdx={si}
           units={units}
+          exerciseType={exercise.exerciseType}
           onToggleDone={handleToggle}
           onWeightChange={handleWeightChange}
           onRepsChange={handleRepsChange}
+          onSpeedChange={handleSpeedChange}
+          onInclineChange={handleInclineChange}
           onRestStart={onRestStart}
         />
       ))}
@@ -143,16 +231,30 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
+    gap: spacing.sm,
   },
-  headerLeft: { flex: 1, gap: 4 },
+  dragHandle: {
+    paddingTop: 2,
+    paddingRight: 4,
+    width: 28,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    // Make it easier to grab
+    minHeight: 36,
+  },
+  headerCenter: { flex: 1, gap: 4 },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
   exerciseName: {
     fontFamily: "Outfit_700Bold",
     fontSize: fontSize.lg,
     color: colors.text,
   },
-  badges: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  badges: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
   progress: {
     fontFamily: "Inter_400Regular",
     fontSize: fontSize.sm,
@@ -163,7 +265,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.accent,
   },
-  notesBtn: {
+  iconBtn: {
     width: 34,
     height: 34,
     alignItems: "center",

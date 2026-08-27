@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,14 +8,16 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
-import { Card } from "../components/ui/Card";
+import * as Haptics from "expo-haptics";
+import { ScreenHeader } from "../components/ui/ScreenHeader";
 import { ErrorBoundary } from "../components/ui/ErrorBoundary";
+import { Badge } from "../components/ui/Badge";
 import { api } from "../api/client";
 import { useSettingsStore } from "../store/settingsStore";
 import { colors, fontSize, spacing, radius } from "../constants/theme";
@@ -35,6 +37,83 @@ const QUICK_PROMPTS = [
   "How much focus time this week?",
   "Help me plan tomorrow's coding session",
 ];
+
+// ─── Typing indicator (3 pulsing dots) ───────────────────────────────────────
+
+function TypingIndicator() {
+  const dots = [
+    useRef(new Animated.Value(0.3)).current,
+    useRef(new Animated.Value(0.3)).current,
+    useRef(new Animated.Value(0.3)).current,
+  ];
+
+  useEffect(() => {
+    const anims = dots.map((dot, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 160),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0.3,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+    );
+    anims.forEach((a) => a.start());
+    return () => anims.forEach((a) => a.stop());
+  }, []);
+
+  return (
+    <View style={typingStyles.row}>
+      <Text style={typingStyles.icon}>🤖</Text>
+      <View style={typingStyles.bubble}>
+        {dots.map((dot, i) => (
+          <Animated.View key={i} style={[typingStyles.dot, { opacity: dot }]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const typingStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  icon: { fontSize: 20 },
+  bubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.textMuted,
+  },
+});
+
+// ─── Relative time ────────────────────────────────────────────────────────────
+
+function relativeTime(ts: number): string {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 10) return "just now";
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
+}
+
+// ─── AI Coach content ─────────────────────────────────────────────────────────
 
 function AICoachContent() {
   const router = useRouter();
@@ -58,7 +137,8 @@ function AICoachContent() {
         message,
         provider: activeProvider,
       }),
-    onSuccess: (data, message) => {
+    onSuccess: (data) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setMessages((prev) => [
         ...prev,
         {
@@ -88,6 +168,7 @@ function AICoachContent() {
     (text?: string) => {
       const msg = (text ?? input).trim();
       if (!msg) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setMessages((prev) => [
         ...prev,
         {
@@ -104,27 +185,16 @@ function AICoachContent() {
     [input, sendMessage],
   );
 
+  const providerBadge = (
+    <Badge
+      label={activeProvider === "gemini" ? "Gemini" : "OpenAI"}
+      variant={activeProvider === "gemini" ? "accent" : "muted"}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View>
-          <Text style={styles.title}>AI Coach</Text>
-          <Text style={styles.subtitle}>
-            {activeProvider === "gemini" ? "🔵 Gemini" : "🟢 OpenAI"}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => router.push("/settings")}>
-          <Ionicons
-            name="settings-outline"
-            size={22}
-            color={colors.textMuted}
-          />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="AI Coach" rightAction={providerBadge} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -141,16 +211,17 @@ function AICoachContent() {
             scrollRef.current?.scrollToEnd({ animated: false })
           }
         >
-          {/* Quick prompts */}
+          {/* Quick prompts — shown until conversation starts */}
           {messages.length <= 1 && (
             <View style={styles.quickSection}>
               <Text style={styles.quickLabel}>Try asking:</Text>
               <View style={styles.quickGrid}>
-                {QUICK_PROMPTS.map((p) => (
+                {QUICK_PROMPTS.map((p, i) => (
                   <TouchableOpacity
                     key={p}
                     style={styles.quickChip}
                     onPress={() => handleSend(p)}
+                    activeOpacity={0.75}
                   >
                     <Text style={styles.quickChipText}>{p}</Text>
                   </TouchableOpacity>
@@ -159,7 +230,7 @@ function AICoachContent() {
             </View>
           )}
 
-          {/* Chat bubbles */}
+          {/* Chat messages */}
           {messages.map((msg) => (
             <View
               key={msg.id}
@@ -173,39 +244,43 @@ function AICoachContent() {
               {msg.role === "assistant" && (
                 <Text style={styles.bubbleIcon}>🤖</Text>
               )}
-              <View
-                style={[
-                  styles.bubbleContent,
-                  msg.role === "user"
-                    ? styles.bubbleContentUser
-                    : styles.bubbleContentAssistant,
-                ]}
-              >
-                <Text
+              <View style={{ maxWidth: "82%" }}>
+                <View
                   style={[
-                    styles.bubbleText,
+                    styles.bubbleContent,
                     msg.role === "user"
-                      ? styles.bubbleTextUser
-                      : styles.bubbleTextAssistant,
+                      ? styles.bubbleContentUser
+                      : styles.bubbleContentAssistant,
                   ]}
                 >
-                  {msg.content}
+                  <Text
+                    style={[
+                      styles.bubbleText,
+                      msg.role === "user"
+                        ? styles.bubbleTextUser
+                        : styles.bubbleTextAssistant,
+                    ]}
+                  >
+                    {msg.content}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.timestamp,
+                    msg.role === "user" && { textAlign: "right" },
+                  ]}
+                >
+                  {relativeTime(msg.timestamp)}
                 </Text>
               </View>
             </View>
           ))}
 
-          {sendMessage.isPending && (
-            <View style={styles.bubble}>
-              <Text style={styles.bubbleIcon}>🤖</Text>
-              <View style={styles.bubbleContentAssistant}>
-                <ActivityIndicator color={colors.accent} size="small" />
-              </View>
-            </View>
-          )}
+          {/* Typing indicator */}
+          {sendMessage.isPending && <TypingIndicator />}
         </ScrollView>
 
-        {/* Input */}
+        {/* Input bar */}
         <View style={styles.inputBar}>
           <TextInput
             style={styles.input}
@@ -215,6 +290,7 @@ function AICoachContent() {
             placeholderTextColor={colors.textFaint}
             multiline
             maxLength={2000}
+            onSubmitEditing={() => handleSend()}
           />
           <TouchableOpacity
             style={[
@@ -224,6 +300,7 @@ function AICoachContent() {
             ]}
             onPress={() => handleSend()}
             disabled={!input.trim() || sendMessage.isPending}
+            activeOpacity={0.8}
           >
             <Ionicons
               name="send"
@@ -268,27 +345,6 @@ export default function AIScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing["2xl"],
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    fontFamily: "Outfit_700Bold",
-    fontSize: fontSize.lg,
-    color: colors.text,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
 
   messages: { flex: 1 },
   messagesContent: {
@@ -323,14 +379,22 @@ const styles = StyleSheet.create({
   bubbleAssistant: {},
   bubbleIcon: { fontSize: 20, marginTop: 4 },
   bubbleContent: {
-    maxWidth: "80%",
     borderRadius: radius.lg,
     padding: spacing.md,
   },
-  bubbleContentUser: { backgroundColor: colors.accent },
+  bubbleContentUser: {
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   bubbleContentAssistant: {
     backgroundColor: colors.surface,
     borderWidth: 1,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
     borderColor: colors.border,
   },
   bubbleText: {
@@ -340,6 +404,12 @@ const styles = StyleSheet.create({
   },
   bubbleTextUser: { color: colors.text },
   bubbleTextAssistant: { color: colors.text },
+  timestamp: {
+    fontFamily: "Inter_400Regular",
+    fontSize: fontSize.xs,
+    color: colors.textFaint,
+    marginTop: 4,
+  },
 
   inputBar: {
     flexDirection: "row",
@@ -370,6 +440,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  sendBtnDisabled: { backgroundColor: colors.surfaceAlt },
+  sendBtnDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
 });

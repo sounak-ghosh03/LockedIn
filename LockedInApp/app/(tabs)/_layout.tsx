@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useRef, useCallback } from "react";
 import { Tabs } from "expo-router";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, StyleSheet, Platform, Animated, ColorValue } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import { colors, tabBar, fontSize } from "../../constants/theme";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -33,10 +34,10 @@ const TABS: Array<{
     iconFocused: "nutrition",
   },
   {
-    name: "analytics",
-    title: "Analytics",
-    icon: "stats-chart-outline",
-    iconFocused: "stats-chart",
+    name: "timer",
+    title: "Timer",
+    icon: "timer-outline",
+    iconFocused: "timer",
   },
   {
     name: "tasks",
@@ -46,15 +47,63 @@ const TABS: Array<{
   },
 ];
 
+// ─── Animated tab icon ────────────────────────────────────────────────────────
+
+function AnimatedTabIcon({
+  focused,
+  name,
+  color,
+}: {
+  focused: boolean;
+  name: IoniconName;
+  color: string | ColorValue;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (focused) {
+      Animated.spring(scale, {
+        toValue: 1.18,
+        useNativeDriver: true,
+        speed: 40,
+        bounciness: 6,
+      }).start();
+    } else {
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 40,
+        bounciness: 4,
+      }).start();
+    }
+  }, [focused, scale]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.iconWrapper,
+        focused && styles.iconActive,
+        { transform: [{ scale }] },
+      ]}
+    >
+      <Ionicons name={name} size={tabBar.iconSize} color={color} />
+    </Animated.View>
+  );
+}
+
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+
+  const handleTabPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: "rgba(26, 26, 26, 0.96)",
           borderTopColor: colors.border,
           borderTopWidth: 1,
           height: tabBar.height + (Platform.OS === "ios" ? insets.bottom : 0),
@@ -66,10 +115,13 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textFaint,
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
-          fontSize: 10,
-          marginTop: 2,
+          fontSize: 11,
+          marginTop: 1,
         },
         tabBarShowLabel: true,
+      }}
+      screenListeners={{
+        tabPress: handleTabPress,
       }}
     >
       {TABS.map((tab) => (
@@ -79,14 +131,13 @@ export default function TabLayout() {
           options={{
             title: tab.title,
             tabBarIcon: ({ focused, color }) => (
-              <View style={[styles.iconWrapper, focused && styles.iconActive]}>
-                <Ionicons
-                  name={focused ? tab.iconFocused : tab.icon}
-                  size={tabBar.iconSize}
-                  color={color}
-                />
-              </View>
+              <AnimatedTabIcon
+                focused={focused}
+                name={focused ? tab.iconFocused : tab.icon}
+                color={color}
+              />
             ),
+
           }}
         />
       ))}
@@ -104,5 +155,7 @@ const styles = StyleSheet.create({
   },
   iconActive: {
     backgroundColor: colors.accentDim,
+    borderTopWidth: 2,
+    borderTopColor: colors.accent,
   },
 });

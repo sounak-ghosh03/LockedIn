@@ -15,9 +15,11 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Notifications from "expo-notifications";
+import * as Haptics from "expo-haptics";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
+import { ScreenHeader } from "../components/ui/ScreenHeader";
 import { useAuth } from "../auth/useAuth";
 import { useSettingsStore } from "../store/settingsStore";
 import { api } from "../api/client";
@@ -259,13 +261,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Settings" />
 
       <ScrollView
         contentContainerStyle={styles.content}

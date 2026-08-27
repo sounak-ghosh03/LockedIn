@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useAuthContext } from "../../auth/AuthProvider";
 import { ApiError } from "../../api/client";
 import {
@@ -177,7 +178,11 @@ export default function LoginScreen() {
             {/* Email input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email</Text>
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                ]}
+              >
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
                   value={email}
@@ -185,6 +190,9 @@ export default function LoginScreen() {
                     setEmail(t);
                     if (error) setError("");
                   }}
+                  onFocus={() =>
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  }
                   placeholder="you@example.com"
                   placeholderTextColor={colors.textFaint}
                   keyboardType="email-address"
@@ -208,6 +216,9 @@ export default function LoginScreen() {
                     setPassword(t);
                     if (error) setError("");
                   }}
+                  onFocus={() =>
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  }
                   placeholder="••••••••"
                   placeholderTextColor={colors.textFaint}
                   secureTextEntry={!showPassword}
@@ -218,7 +229,10 @@ export default function LoginScreen() {
                 />
                 <TouchableOpacity
                   style={styles.eyeBtn}
-                  onPress={() => setShowPassword((v) => !v)}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowPassword((v) => !v);
+                  }}
                   testID="login-password-eye"
                 >
                   <Ionicons

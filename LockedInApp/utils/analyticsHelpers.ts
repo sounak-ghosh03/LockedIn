@@ -93,3 +93,58 @@ export function muscleGroupFrequency(
     .slice(0, 10)
     .map(([muscle, count]) => ({ muscle, count }));
 }
+
+/** PR history over time — best est. 1RM per exercise per day for charting */
+export function extractPRHistory(
+  sessions: WorkoutSessionData[],
+): Record<string, Array<{ date: string; value: number; label: string }>> {
+  // Map: exerciseId → array of { date, best1RM }
+  const history: Record<string, Array<{ date: string; best1RM: number }>> = {};
+
+  // Sort sessions ascending by date
+  const sorted = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
+
+  for (const s of sorted) {
+    const date = s.date.slice(0, 10);
+    for (const ex of s.exercises) {
+      for (const set of ex.sets) {
+        if (!set.completed || set.weightKg <= 0 || set.reps <= 0) continue;
+        const est1RM = Math.round(set.weightKg * (1 + set.reps / 30) * 10) / 10;
+        if (!history[ex.exerciseId]) {
+          history[ex.exerciseId] = [];
+        }
+        const last = history[ex.exerciseId].at(-1);
+        // Only keep one data point per date (best on that date)
+        if (last && last.date === date) {
+          if (est1RM > last.best1RM) last.best1RM = est1RM;
+        } else {
+          history[ex.exerciseId].push({ date, best1RM: est1RM });
+        }
+      }
+    }
+  }
+
+  // Return as chart-ready arrays, keyed by exerciseName (looked up from PRs)
+  const result: Record<
+    string,
+    Array<{ date: string; value: number; label: string }>
+  > = {};
+  for (const [exId, points] of Object.entries(history)) {
+    // Lookup name from sessions
+    let exName = exId;
+    outer: for (const s of sessions) {
+      for (const ex of s.exercises) {
+        if (ex.exerciseId === exId) {
+          exName = ex.name;
+          break outer;
+        }
+      }
+    }
+    result[exName] = points.map((p) => ({
+      date: p.date,
+      value: p.best1RM,
+      label: p.date.slice(5), // MM-DD
+    }));
+  }
+  return result;
+}

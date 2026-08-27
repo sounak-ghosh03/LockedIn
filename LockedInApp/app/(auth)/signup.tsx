@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useAuthContext } from "../../auth/AuthProvider";
 import { ApiError } from "../../api/client";
 import {
@@ -22,6 +23,7 @@ import {
   radius,
   shadows,
 } from "../../constants/theme";
+
 
 export default function SignupScreen() {
   const { signUpWithEmail, signIn, isLoading } = useAuthContext();

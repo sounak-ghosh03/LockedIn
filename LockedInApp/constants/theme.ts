@@ -4,8 +4,10 @@ export const colors = {
   surface: "#1A1A1A",
   surfaceAlt: "#242424",
   surfaceHigh: "#2E2E2E",
+  surfaceElevated: "#303030",
   accent: "#FF4D00",
   accentSoft: "#FF6B35",
+  accentMid: "rgba(255, 77, 0, 0.15)",
   accentGlow: "rgba(255, 77, 0, 0.20)",
   accentDim: "rgba(255, 77, 0, 0.10)",
   success: "#00D084",
@@ -65,6 +67,7 @@ export const radius = {
   md: 10,
   lg: 14,
   xl: 20,
+  xxl: 28,
   full: 9999,
 } as const;
 
@@ -73,9 +76,16 @@ export const shadows = {
   accentGlow: {
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  subtle: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
   card: {
     shadowColor: "#000",

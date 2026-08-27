@@ -772,21 +772,19 @@ export default function TasksScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Tasks</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.calBtn}
-              onPress={() => router.push("/calendar")}
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={colors.textMuted}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
-              <Ionicons name="add" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.calBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/calendar");
+            }}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.textMuted}
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Active focus session */}
@@ -795,7 +793,7 @@ export default function TasksScreen() {
             <View style={styles.sessionBanner}>
               <View>
                 <Text style={styles.sessionLabel}>⚡ Active Session</Text>
-                <Text style={styles.sessionName}>{activeSession.label}</Text>
+                <Text style={styles.sessionName}>{activeSession.customLabel || activeSession.category}</Text>
               </View>
               <Button
                 label="Open Timer"
@@ -840,7 +838,10 @@ export default function TasksScreen() {
                 styles.statChip,
                 filter === s.filter && styles.statChipActive,
               ]}
-              onPress={() => setFilter(s.filter)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setFilter(s.filter);
+              }}
             >
               <Text style={styles.statIcon}>{s.icon}</Text>
               <Text
@@ -931,6 +932,18 @@ export default function TasksScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Floating action button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          handleAdd();
+        }}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add" size={28} color={colors.text} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -975,6 +988,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 28,
+    right: spacing["2xl"],
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
   },
 
   // Session banner

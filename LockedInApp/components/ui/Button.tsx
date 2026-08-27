@@ -1,12 +1,14 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import {
-  TouchableOpacity,
+  Animated,
+  TouchableWithoutFeedback,
   Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import {
   colors,
@@ -18,6 +20,7 @@ import {
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
 interface ButtonProps {
   onPress: () => void;
@@ -30,6 +33,8 @@ interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   haptic?: boolean;
+  /** Optional Ionicons icon name rendered to the left of the label */
+  icon?: IoniconName;
 }
 
 export const Button = React.memo(function Button({
@@ -43,47 +48,84 @@ export const Button = React.memo(function Button({
   style,
   textStyle,
   haptic = true,
+  icon,
 }: ButtonProps) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scale, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  }, [scale]);
+
   const handlePress = useCallback(() => {
     if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   }, [onPress, haptic]);
 
-  const containerStyle = [
-    styles.base,
-    styles[`variant_${variant}`],
-    styles[`size_${size}`],
-    fullWidth && styles.fullWidth,
-    (disabled || loading) && styles.disabled,
-    variant === "primary" && !disabled && shadows.accentGlow,
-    style,
-  ];
+  const iconSize = size === "sm" ? 14 : size === "lg" ? 20 : 16;
+  const iconColor =
+    variant === "primary"
+      ? colors.text
+      : variant === "danger"
+        ? colors.error
+        : variant === "ghost"
+          ? colors.accent
+          : colors.textMuted;
 
   return (
-    <TouchableOpacity
-      style={containerStyle}
+    <TouchableWithoutFeedback
       onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled || loading}
-      activeOpacity={0.75}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === "primary" ? colors.text : colors.accent}
-          size="small"
-        />
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            styles[`text_${variant}`],
-            styles[`textSize_${size}`],
-            textStyle,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
-    </TouchableOpacity>
+      <Animated.View
+        style={[
+          styles.base,
+          styles[`variant_${variant}`],
+          styles[`size_${size}`],
+          fullWidth && styles.fullWidth,
+          (disabled || loading) && styles.disabled,
+          variant === "primary" && !disabled && shadows.accentGlow,
+          { transform: [{ scale }] },
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator
+            color={variant === "primary" ? colors.text : colors.accent}
+            size="small"
+          />
+        ) : (
+          <>
+            {icon && <Ionicons name={icon} size={iconSize} color={iconColor} />}
+            <Text
+              style={[
+                styles.text,
+                styles[`text_${variant}`],
+                styles[`textSize_${size}`],
+                textStyle,
+              ]}
+            >
+              {label}
+            </Text>
+          </>
+        )}
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 });
 

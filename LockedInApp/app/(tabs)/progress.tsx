@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Animated,
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +20,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import {
   SkeletonCard,
   SkeletonStatRow,
@@ -1033,9 +1033,13 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
       >
         {screenTab === "progress" ? (
-          <ProgressContent onShowLogModal={() => setShowLogModal(true)} />
+          <ErrorBoundary>
+            <ProgressContent onShowLogModal={() => setShowLogModal(true)} />
+          </ErrorBoundary>
         ) : (
-          <AnalyticsContent />
+          <ErrorBoundary>
+            <AnalyticsContent />
+          </ErrorBoundary>
         )}
       </ScrollView>
     </SafeAreaView>

@@ -140,6 +140,11 @@ export default function TabLayout() {
           }}
         />
       ))}
+      {/* Hide the standalone analytics screen — its content lives inside the Progress tab */}
+      <Tabs.Screen
+        name="analytics"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

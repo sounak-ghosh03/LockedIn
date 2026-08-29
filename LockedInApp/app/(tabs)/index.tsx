@@ -85,6 +85,7 @@ const countStyles = StyleSheet.create({
 });
 
 // ─── Mini heatmap (last 12 weeks) ────────────────────────────────────────────
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"]; // JS getDay(): 0=Sun … 6=Sat
 
 const MiniHeatmap = React.memo(function MiniHeatmap({
   data,
@@ -96,6 +97,15 @@ const MiniHeatmap = React.memo(function MiniHeatmap({
   for (let i = 0; i < days.length; i += 7) {
     weeks.push(days.slice(i, i + 7));
   }
+
+  // Row 0 isn't necessarily Sunday — the 84-day window can start on any
+  // weekday. Rotate the label list to match whatever the first day actually
+  // is, so the letters line up correctly with the grid.
+  const startDow = days.length ? new Date(days[0].date).getDay() : 0;
+  const rowLabels = Array.from(
+    { length: 7 },
+    (_, r) => DAY_LETTERS[(startDow + r) % 7],
+  );
 
   const getColor = (day: HeatmapDay) => {
     if (!day.hasActivity) return colors.surfaceAlt;
@@ -109,26 +119,51 @@ const MiniHeatmap = React.memo(function MiniHeatmap({
   };
 
   return (
-    <View style={heatStyles.container}>
-      {weeks.map((week, wi) => (
-        <View key={wi} style={heatStyles.week}>
-          {week.map((day, di) => (
-            <View
-              key={di}
-              style={[heatStyles.cell, { backgroundColor: getColor(day) }]}
-            />
-          ))}
-        </View>
-      ))}
+    <View style={heatStyles.row}>
+      <View style={heatStyles.labelColumn}>
+        {rowLabels.map((label, i) => (
+          <Text key={i} style={heatStyles.dayLabel}>
+            {label}
+          </Text>
+        ))}
+      </View>
+      <View style={heatStyles.container}>
+        {weeks.map((week, wi) => (
+          <View key={wi} style={heatStyles.week}>
+            {week.map((day, di) => (
+              <View
+                key={di}
+                style={[heatStyles.cell, { backgroundColor: getColor(day) }]}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
     </View>
   );
 });
 
+const CELL_SIZE = Math.max(
+  8,
+  (width - spacing["2xl"] * 2 - spacing.lg * 2 - 3 * 11) / 12,
+);
+
 const heatStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
+  labelColumn: { gap: 3 },
+  dayLabel: {
+    width: 12,
+    height: CELL_SIZE,
+    lineHeight: CELL_SIZE,
+    textAlign: "center",
+    fontFamily: "Inter_400Regular",
+    fontSize: 9,
+    color: colors.textFaint,
+  },
   container: { flexDirection: "row", gap: 3 },
   week: { gap: 3 },
   cell: {
-    width: (width - spacing["2xl"] * 2 - spacing.lg * 2 - 3 * 11) / 12,
+    width: CELL_SIZE,
     aspectRatio: 1,
     borderRadius: 2,
   },

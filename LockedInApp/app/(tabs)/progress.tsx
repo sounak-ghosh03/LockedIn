@@ -10,7 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -57,10 +57,13 @@ const RANGE_DAYS: Record<Range, number> = {
   ALL: 3650,
 };
 
-const { width } = Dimensions.get("window");
-const CELL_SIZE = Math.floor(
-  (width - spacing["2xl"] * 2 - spacing.lg * 2 - 3 * 11) / 12,
-);
+// Fire-and-forget haptics — never let a rejected promise (e.g. no haptics
+// hardware on this device/simulator) turn into an unhandled rejection.
+function tapHaptic(
+  style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light,
+) {
+  Haptics.impactAsync(style).catch(() => {});
+}
 
 // ─── Log Measurement Modal ────────────────────────────────────────────────────
 
@@ -83,8 +86,11 @@ function LogMeasurementModal({ visible, onClose }: LogMeasurementModalProps) {
     for (const meta of MEASUREMENT_META) {
       const raw = values[meta.key];
       if (raw && raw.trim() !== "") {
-        (payload as Record<string, unknown>)[meta.key] = parseFloat(raw);
-        hasAny = true;
+        const parsed = parseFloat(raw);
+        if (!Number.isNaN(parsed)) {
+          (payload as Record<string, unknown>)[meta.key] = parsed;
+          hasAny = true;
+        }
       }
     }
     if (!hasAny) {
@@ -109,7 +115,7 @@ function LogMeasurementModal({ visible, onClose }: LogMeasurementModalProps) {
         <View style={modalStyles.header}>
           <TouchableOpacity
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              tapHaptic();
               onClose();
             }}
           >
@@ -238,9 +244,11 @@ interface HeatmapDay {
 
 const FullHeatmap = React.memo(function FullHeatmap({
   data,
+  cellSize,
   onSelectDay,
 }: {
   data: HeatmapDay[];
+  cellSize: number;
   onSelectDay: (d: HeatmapDay | null) => void;
 }) {
   const weeks: HeatmapDay[][] = [];
@@ -249,8 +257,11 @@ const FullHeatmap = React.memo(function FullHeatmap({
   }
 
   const getColor = (d: HeatmapDay) => {
-    if (!d.hasActivity) return colors.surfaceAlt;
-    const intensity = Math.min(1, d.workoutCount * 0.5 + d.focusMinutes / 120);
+    if (!d?.hasActivity) return colors.surfaceAlt;
+    const intensity = Math.min(
+      1,
+      (d.workoutCount ?? 0) * 0.5 + (d.focusMinutes ?? 0) / 120,
+    );
     if (intensity < 0.4) return "#802600";
     if (intensity < 0.7) return "#C13D00";
     return colors.accent;
@@ -264,9 +275,16 @@ const FullHeatmap = React.memo(function FullHeatmap({
             {week.map((day, di) => (
               <TouchableOpacity
                 key={di}
-                style={[styles.heatCell, { backgroundColor: getColor(day) }]}
+                style={[
+                  styles.heatCell,
+                  {
+                    width: cellSize,
+                    height: cellSize,
+                    backgroundColor: getColor(day),
+                  },
+                ]}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  tapHaptic();
                   onSelectDay(day);
                 }}
               />
@@ -297,14 +315,16 @@ const PRItem = React.memo(function PRItem({
 }) {
   const medal =
     rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
+  const dateObj = date ? new Date(date) : null;
+  const dateLabel =
+    dateObj && !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : "—";
   return (
     <View style={styles.prItem}>
       <Text style={styles.prMedal}>{medal}</Text>
       <View style={{ flex: 1 }}>
         <Text style={styles.prName}>{name}</Text>
         <Text style={styles.prMeta}>
-          {bestWeightKg} kg × {bestReps} reps ·{" "}
-          {new Date(date).toLocaleDateString()}
+          {bestWeightKg} kg × {bestReps} reps · {dateLabel}
         </Text>
       </View>
       <View style={styles.pr1RMBadge}>
@@ -368,7 +388,7 @@ const sbStyles = StyleSheet.create({
 
 // ─── Progress tab content ─────────────────────────────────────────────────────
 
-function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
+function ProgressContent() {
   const [range, setRange] = useState<Range>("3M");
   const [selectedMetricKey, setSelectedMetricKey] =
     useState<MeasurementKey>("weightKg");
@@ -389,15 +409,19 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
     MEASUREMENT_META[0];
 
   const sorted = useMemo(
-    () => [...measurements].sort((a, b) => a.date.localeCompare(b.date)),
+    () =>
+      [...measurements]
+        .filter((m) => !!m?.date)
+        .sort((a, b) => a.date.localeCompare(b.date)),
     [measurements],
   );
-  const latest = sorted.at(-1);
-  const oldest = sorted[0];
+  // Avoid Array.prototype.at() — not guaranteed available on older Hermes builds.
+  const latest = sorted.length ? sorted[sorted.length - 1] : undefined;
+  const oldest = sorted.length ? sorted[0] : undefined;
 
   const convertVal = useCallback(
     (val: number | undefined | null) => {
-      if (val == null) return null;
+      if (val == null || Number.isNaN(val)) return null;
       const converted = units === "imperial" ? val * selectedMeta.factor : val;
       return +converted.toFixed(1);
     },
@@ -447,7 +471,7 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
                   },
                 ]}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  tapHaptic();
                   setSelectedMetricKey(meta.key);
                 }}
               >
@@ -474,7 +498,7 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
               <Text style={[styles.heroValue, { color: selectedMeta.color }]}>
                 {latestVal != null ? `${latestVal} ${displayUnit}` : "—"}
               </Text>
-              {latest && (
+              {latest?.date && !isNaN(new Date(latest.date).getTime()) && (
                 <Text style={styles.heroDate}>
                   {new Date(latest.date).toLocaleDateString()}
                 </Text>
@@ -504,7 +528,7 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
             key={r}
             style={[styles.rangeBtn, range === r && styles.rangeBtnActive]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              tapHaptic();
               setRange(r);
             }}
           >
@@ -541,7 +565,7 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
             const val = latest ? convertVal(latest[meta.key] as number) : null;
             const prevVal =
               sorted.length >= 2
-                ? convertVal(sorted.at(-2)![meta.key] as number)
+                ? convertVal(sorted[sorted.length - 2][meta.key] as number)
                 : null;
             let deltaStr: string | undefined;
             if (val != null && prevVal != null) {
@@ -583,35 +607,39 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
             .slice()
             .reverse()
             .slice(0, 20)
-            .map((m) => (
-              <Card key={m._id} style={styles.histCard}>
-                <View style={styles.histHeader}>
-                  <Text style={styles.histDate}>
-                    {new Date(m.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
+            .map((m) => {
+              const dateObj = new Date(m.date);
+              const dateLabel = !isNaN(dateObj.getTime())
+                ? dateObj.toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "—";
+              return (
+                <Card key={m._id} style={styles.histCard}>
+                  <View style={styles.histHeader}>
+                    <Text style={styles.histDate}>{dateLabel}</Text>
+                  </View>
+                  <View style={styles.histMetrics}>
+                    {MEASUREMENT_META.filter(
+                      (mt) => m[mt.key] != null && (m[mt.key] as number) > 0,
+                    ).map((mt) => {
+                      const val = convertVal(m[mt.key] as number);
+                      const unit = units === "imperial" ? mt.altUnit : mt.unit;
+                      return (
+                        <View key={mt.key} style={styles.histMetric}>
+                          <Text style={styles.histMetricIcon}>{mt.icon}</Text>
+                          <Text style={styles.histMetricVal}>
+                            {val} {unit}
+                          </Text>
+                        </View>
+                      );
                     })}
-                  </Text>
-                </View>
-                <View style={styles.histMetrics}>
-                  {MEASUREMENT_META.filter(
-                    (mt) => m[mt.key] != null && (m[mt.key] as number) > 0,
-                  ).map((mt) => {
-                    const val = convertVal(m[mt.key] as number);
-                    const unit = units === "imperial" ? mt.altUnit : mt.unit;
-                    return (
-                      <View key={mt.key} style={styles.histMetric}>
-                        <Text style={styles.histMetricIcon}>{mt.icon}</Text>
-                        <Text style={styles.histMetricVal}>
-                          {val} {unit}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </Card>
-            ))
+                  </View>
+                </Card>
+              );
+            })
         )}
       </View>
     </>
@@ -620,7 +648,7 @@ function ProgressContent({ onShowLogModal }: { onShowLogModal: () => void }) {
 
 // ─── Analytics tab content ────────────────────────────────────────────────────
 
-function AnalyticsContent() {
+function AnalyticsContent({ cellSize }: { cellSize: number }) {
   const [selectedDay, setSelectedDay] = useState<HeatmapDay | null>(null);
   const [prLimit, setPrLimit] = useState(5);
   const [selectedPRExercise, setSelectedPRExercise] = useState<string | null>(
@@ -659,28 +687,29 @@ function AnalyticsContent() {
 
   const stats = useMemo(() => {
     let streak = 0;
-    const sorted = [...heatmapData].reverse();
-    for (const d of sorted) {
-      if (d.hasActivity) streak++;
+    const reversed = [...heatmapData].reverse();
+    for (const d of reversed) {
+      if (d?.hasActivity) streak++;
       else break;
     }
     let longest = 0,
       current = 0;
     for (const d of heatmapData) {
-      if (d.hasActivity) {
+      if (d?.hasActivity) {
         current++;
         longest = Math.max(longest, current);
       } else current = 0;
     }
     const yearStart = new Date().getFullYear() + "-01-01";
     const activeDays = heatmapData.filter(
-      (d) => d.date >= yearStart && d.hasActivity,
+      (d) => d?.date >= yearStart && d?.hasActivity,
     ).length;
     const totalVolumeTonnes =
-      sessions.reduce((s, w) => s + w.totalVolumeKg, 0) / 1000;
+      sessions.reduce((s, w) => s + (w?.totalVolumeKg ?? 0), 0) / 1000;
     const avgDuration = sessions.length
       ? Math.round(
-          sessions.reduce((s, w) => s + w.durationMinutes, 0) / sessions.length,
+          sessions.reduce((s, w) => s + (w?.durationMinutes ?? 0), 0) /
+            sessions.length,
         )
       : 0;
     return { streak, longest, activeDays, totalVolumeTonnes, avgDuration };
@@ -735,7 +764,11 @@ function AnalyticsContent() {
             </View>
           ) : heatmapData.length > 0 ? (
             <>
-              <FullHeatmap data={heatmapData} onSelectDay={setSelectedDay} />
+              <FullHeatmap
+                data={heatmapData}
+                cellSize={cellSize}
+                onSelectDay={setSelectedDay}
+              />
               <View style={styles.heatLegend}>
                 <Text style={styles.legendText}>Less</Text>
                 {[colors.surfaceAlt, "#802600", "#C13D00", colors.accent].map(
@@ -846,7 +879,7 @@ function AnalyticsContent() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      tapHaptic();
                       setSelectedPRExercise(pr.exerciseName);
                     }}
                   >
@@ -913,7 +946,7 @@ function AnalyticsContent() {
               <TouchableOpacity
                 style={styles.showMoreBtn}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  tapHaptic();
                   setPrLimit((n) => n + 5);
                 }}
               >
@@ -951,18 +984,33 @@ export default function ProgressScreen() {
   const [screenTab, setScreenTab] = useState<ScreenTab>("progress");
   const [showLogModal, setShowLogModal] = useState(false);
 
+  // Recompute from live window dimensions (not a module-level constant) and
+  // clamp to a sane minimum so a small/foldable/split-screen width can never
+  // produce a negative or NaN cell size — that was crashing the native layout
+  // engine (Yoga) whenever the Analytics heatmap rendered.
+  const { width } = useWindowDimensions();
+  const cellSize = useMemo(() => {
+    const raw = Math.floor(
+      (width - spacing["2xl"] * 2 - spacing.lg * 2 - 3 * 11) / 12,
+    );
+    return Math.max(8, Number.isFinite(raw) ? raw : 8);
+  }, [width]);
+
   const handleTabChange = (tab: ScreenTab) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    tapHaptic();
     setScreenTab(tab);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Log modal */}
-      <LogMeasurementModal
-        visible={showLogModal}
-        onClose={() => setShowLogModal(false)}
-      />
+      {/* Log modal — mounted only while open, so its hooks/JSX can't throw
+          while the screen is just sitting on "Body Metrics" or "Analytics". */}
+      {showLogModal && (
+        <LogMeasurementModal
+          visible={showLogModal}
+          onClose={() => setShowLogModal(false)}
+        />
+      )}
 
       {/* Header */}
       <View style={styles.header}>
@@ -975,7 +1023,7 @@ export default function ProgressScreen() {
             size="sm"
             icon="add-outline"
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              tapHaptic(Haptics.ImpactFeedbackStyle.Medium);
               setShowLogModal(true);
             }}
           />
@@ -1034,11 +1082,11 @@ export default function ProgressScreen() {
       >
         {screenTab === "progress" ? (
           <ErrorBoundary>
-            <ProgressContent onShowLogModal={() => setShowLogModal(true)} />
+            <ProgressContent />
           </ErrorBoundary>
         ) : (
           <ErrorBoundary>
-            <AnalyticsContent />
+            <AnalyticsContent cellSize={cellSize} />
           </ErrorBoundary>
         )}
       </ScrollView>
@@ -1214,7 +1262,7 @@ const styles = StyleSheet.create({
   // Analytics
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
 
-  heatCell: { width: CELL_SIZE, height: CELL_SIZE, borderRadius: 2 },
+  heatCell: { borderRadius: 2 },
   heatLegend: {
     flexDirection: "row",
     alignItems: "center",

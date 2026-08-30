@@ -17,6 +17,8 @@ import {
   FlatList,
   Animated,
   PanResponder,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -41,8 +43,6 @@ import { colors, fontSize, spacing, radius } from "../../constants/theme";
 import { EXERCISES, MUSCLE_GROUPS, Exercise } from "../../constants/exercises";
 import { Badge } from "../../components/ui/Badge";
 
-
-
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const h = Math.floor(totalSeconds / 3600);
@@ -63,7 +63,12 @@ interface AddExerciseModalProps {
   existingIds: Set<string>;
 }
 
-function AddExerciseModal({ visible, onClose, onAdd, existingIds }: AddExerciseModalProps) {
+function AddExerciseModal({
+  visible,
+  onClose,
+  onAdd,
+  existingIds,
+}: AddExerciseModalProps) {
   const [search, setSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
 
@@ -91,106 +96,128 @@ function AddExerciseModal({ visible, onClose, onAdd, existingIds }: AddExerciseM
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
       onRequestClose={handleClose}
     >
       <SafeAreaView style={modalStyles.container} edges={["top"]}>
-        {/* Header */}
-        <View style={modalStyles.header}>
-          <Text style={modalStyles.title}>Add Exercise</Text>
-          <TouchableOpacity onPress={handleClose} style={modalStyles.closeBtn}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search */}
-        <View style={modalStyles.searchRow}>
-          <Ionicons name="search" size={18} color={colors.textMuted} />
-          <TextInput
-            style={modalStyles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search exercises…"
-            placeholderTextColor={colors.textFaint}
-            autoFocus
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Muscle filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={modalStyles.chipRow}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          {["All", ...MUSCLE_GROUPS].map((m) => {
-            const isAll = m === "All";
-            const active = isAll ? selectedMuscle === null : selectedMuscle === m;
-            return (
-              <TouchableOpacity
-                key={m}
-                style={[modalStyles.chip, active && modalStyles.chipActive]}
-                onPress={() => setSelectedMuscle(isAll ? null : m)}
-              >
-                <Text style={[modalStyles.chipText, active && modalStyles.chipTextActive]}>
-                  {m}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          {/* Header */}
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>Add Exercise</Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              style={modalStyles.closeBtn}
+            >
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
 
-        {/* Exercise list */}
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={modalStyles.list}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => {
-            const inSession = existingIds.has(item.id);
-            return (
-              <TouchableOpacity
-                style={[modalStyles.item, inSession && modalStyles.itemAdded]}
-                onPress={() => {
-                  if (!inSession) {
-                    onAdd(item);
-                    handleClose();
-                  }
-                }}
-                activeOpacity={inSession ? 1 : 0.7}
-              >
-                <View style={modalStyles.itemLeft}>
-                  <Text style={modalStyles.itemName}>{item.name}</Text>
-                  <View style={modalStyles.itemBadges}>
-                    <Badge label={item.muscle} variant="muted" />
-                    <Badge
-                      label={item.equipment}
-                      variant={item.type === "compound" ? "accent" : "muted"}
-                    />
-                  </View>
-                </View>
-                {inSession ? (
-                  <Text style={modalStyles.addedLabel}>Added</Text>
-                ) : (
-                  <Ionicons name="add-circle" size={24} color={colors.accent} />
-                )}
+          {/* Search */}
+          <View style={modalStyles.searchRow}>
+            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <TextInput
+              style={modalStyles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search exercises…"
+              placeholderTextColor={colors.textFaint}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")}>
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.textMuted}
+                />
               </TouchableOpacity>
-            );
-          }}
-          ListEmptyComponent={
-            <Text style={modalStyles.empty}>No exercises match your search.</Text>
-          }
-        />
+            )}
+          </View>
+
+          {/* Muscle filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={modalStyles.chipRow}
+          >
+            {["All", ...MUSCLE_GROUPS].map((m) => {
+              const isAll = m === "All";
+              const active = isAll
+                ? selectedMuscle === null
+                : selectedMuscle === m;
+              return (
+                <TouchableOpacity
+                  key={m}
+                  style={[modalStyles.chip, active && modalStyles.chipActive]}
+                  onPress={() => setSelectedMuscle(isAll ? null : m)}
+                >
+                  <Text
+                    style={[
+                      modalStyles.chipText,
+                      active && modalStyles.chipTextActive,
+                    ]}
+                  >
+                    {m}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Exercise list */}
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={modalStyles.list}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const inSession = existingIds.has(item.id);
+              return (
+                <TouchableOpacity
+                  style={[modalStyles.item, inSession && modalStyles.itemAdded]}
+                  onPress={() => {
+                    if (!inSession) {
+                      onAdd(item);
+                      handleClose();
+                    }
+                  }}
+                  activeOpacity={inSession ? 1 : 0.7}
+                >
+                  <View style={modalStyles.itemLeft}>
+                    <Text style={modalStyles.itemName}>{item.name}</Text>
+                    <View style={modalStyles.itemBadges}>
+                      <Badge label={item.muscle} variant="muted" />
+                      <Badge
+                        label={item.equipment}
+                        variant={item.type === "compound" ? "accent" : "muted"}
+                      />
+                    </View>
+                  </View>
+                  {inSession ? (
+                    <Text style={modalStyles.addedLabel}>Added</Text>
+                  ) : (
+                    <Ionicons
+                      name="add-circle"
+                      size={24}
+                      color={colors.accent}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={modalStyles.empty}>
+                No exercises match your search.
+              </Text>
+            }
+          />
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );
 }
-
-
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -235,7 +262,9 @@ export default function ActiveWorkoutScreen() {
 
   // ─── Elapsed timer ──────────────────────────────────────────────────────────
   const [elapsed, setElapsed] = useState(0);
-  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!activeSession) return;
@@ -264,6 +293,10 @@ export default function ActiveWorkoutScreen() {
 
   // ─── Add Exercise modal ─────────────────────────────────────────────────────
   const [showAddExercise, setShowAddExercise] = useState(false);
+
+  const handleCloseAddExercise = useCallback(() => {
+    setShowAddExercise(false);
+  }, []);
 
   const existingExerciseIds = useMemo(
     () => new Set(activeSession?.exercises.map((ex) => ex.exerciseId) ?? []),
@@ -470,7 +503,9 @@ export default function ActiveWorkoutScreen() {
             isPR={prMap[index] ?? false}
             onRestStart={handleRestStart}
             onDeleteExercise={handleDeleteExercise}
-            onMoveUp={index > 0 ? () => handleReorder(index, index - 1) : undefined}
+            onMoveUp={
+              index > 0 ? () => handleReorder(index, index - 1) : undefined
+            }
             onMoveDown={
               index < exerciseCount - 1
                 ? () => handleReorder(index, index + 1)
@@ -493,7 +528,7 @@ export default function ActiveWorkoutScreen() {
       {/* Add Exercise Modal */}
       <AddExerciseModal
         visible={showAddExercise}
-        onClose={() => setShowAddExercise(false)}
+        onClose={handleCloseAddExercise}
         onAdd={handleAddExercise}
         existingIds={existingExerciseIds}
       />
@@ -570,10 +605,7 @@ function DraggableExerciseCard({
 
   return (
     <Animated.View
-      style={[
-        styles.exerciseWrapper,
-        { transform: [{ translateY }] },
-      ]}
+      style={[styles.exerciseWrapper, { transform: [{ translateY }] }]}
     >
       <ExerciseCard
         exercise={exercise}
